@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  frontend:
+    container_name: cportal-vacl
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - "5174:5174"
+    volumes:
+      # Enable hot reload (important for dev)
+      - .:/app
+      - /app/node_modules
+    command: npm run dev -- --host --port 5174
+    restart: unless-stopped
