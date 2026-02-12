@@ -8,6 +8,8 @@ import { GaugeDetail } from "./pages/GaugeDetail"
 import { Analytics } from "./pages/Analytics"
 import { Settings } from "./pages/Settings"
 import { Login } from "./pages/Login"
+import InwardPage from "./pages/transactions/InwardPage"
+import OutwardPage from "./pages/transactions/OutwardPage"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { usePageTitle } from "./hooks/usePageTitle"
 import { useAuth } from "./contexts/AuthContext"
@@ -41,6 +43,8 @@ function AppContent() {
         <Route path="calibration-certificates" element={<CalibrationCertificates />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="transactions/inward" element={<InwardPage />} />
+        <Route path="transactions/outward" element={<OutwardPage />} />
       </Route>
 
       {/* Catch all - redirect to home */}

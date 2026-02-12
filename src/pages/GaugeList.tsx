@@ -104,6 +104,7 @@ export default function GaugeListPage() {
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         itemsPerPage={ITEMS_PER_PAGE}
+        onGaugeUpdate={refetch}
       />
     </div>
   )

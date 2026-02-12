@@ -324,33 +324,7 @@ export function Analytics() {
         </CardContent>
       </Card>
 
-      {/* Calibration Load Trend */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Calibration Load Trend ({selectedYear})</CardTitle>
-          <CardDescription>
-            Total number of gauges due for calibration each month
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="Total" 
-                stroke="#8b5cf6" 
-                strokeWidth={3}
-                name="Total Due"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+    
 
       {/* Month-wise Summary Table */}
       <Card>

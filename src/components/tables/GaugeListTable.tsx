@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom"
+import { useState } from "react"
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import {
     Pagination, PaginationContent, PaginationItem,
     PaginationLink, PaginationNext, PaginationPrevious
@@ -12,23 +14,27 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, FileText } from "lucide-react"
+import { MoreHorizontal, FileText, ArrowLeft } from "lucide-react"
+import { gaugeService } from "@/services/gauge.service"
 
 interface Props {
     gauges: any[]
     currentPage: number
     setCurrentPage: (page: number) => void
     itemsPerPage: number
+    onGaugeUpdate?: () => void // Add callback for refresh
 }
 
 export function GaugeListTable({
     gauges,
     currentPage,
     setCurrentPage,
-    itemsPerPage
+    itemsPerPage,
+    onGaugeUpdate
 }: Props) {
 
     const navigate = useNavigate()
+    const [isUpdating, setIsUpdating] = useState<string | null>(null)
     const totalPages = Math.ceil(gauges.length / itemsPerPage)
     const start = (currentPage - 1) * itemsPerPage
     const current = gauges.slice(start, start + itemsPerPage);
@@ -67,6 +73,20 @@ export function GaugeListTable({
 
     const handleViewHistory = (gaugeId: string) => {
         navigate(`/gauge-list/history/${gaugeId}`)
+    }
+
+    const handleOutward = async (gaugeId: string) => {
+        try {
+            setIsUpdating(gaugeId)
+            await gaugeService.updateGaugeStatus(gaugeId, 'inward_pending')
+            toast.success('Gauge status updated to outward processing')
+            onGaugeUpdate?.() // Refresh the data
+        } catch (error) {
+            console.error('Error updating gauge status:', error)
+            toast.error('Failed to update gauge status')
+        } finally {
+            setIsUpdating(null)
+        }
     }
 
     return (
@@ -114,6 +134,14 @@ export function GaugeListTable({
                                                 <FileText className="mr-2 h-4 w-4" /> View History
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
+                                            <DropdownMenuItem 
+                                                onClick={() => handleOutward(gauge.id)}
+                                                disabled={isUpdating === gauge.id || gauge.status === 'inward_pending'}
+                                                className="text-blue-600 focus:text-blue-600"
+                                            >
+                                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                                {isUpdating === gauge.id ? 'Updating...' : 'Mark for Outward'}
+                                            </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>

@@ -17,6 +17,7 @@ export interface GaugeHistory {
   result: 'Pass' | 'Fail' | 'Pending'
   notes: string
   certificate?: string
+  certificate_url?: string
   // Additional properties from actual API response
   certificate_issue_date?: string
   next_calibration_date?: string

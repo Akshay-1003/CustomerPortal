@@ -28,5 +28,14 @@ export const gaugeService = {
     
     return await apiService.get<Gauge>(`/gauge/${gaugeId}`)
   },
+
+  async updateGaugeStatus(gaugeId: string, status: string): Promise<Gauge> {
+    // Real API call - Update gauge status
+    if (!gaugeId) {
+      throw new Error('Gauge ID is required')
+    }
+    
+    return await apiService.put<Gauge>(`/gauge/${gaugeId}`, { status })
+  },
 }
 

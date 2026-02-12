@@ -1,4 +1,4 @@
-import { ChevronRight, LayoutDashboard, Gauge, List, FileText, BarChart3, Settings, LogOut, User } from "lucide-react"
+import { ChevronRight, LayoutDashboard, Gauge, List, FileText, Settings, LogOut, User, Package, ArrowRight, ArrowLeft } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -45,15 +45,21 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, href: "/" },
   {
+    title: "Transactions",
+    icon: Package,
+    items: [
+      { title: "Inward", icon: ArrowRight, href: "/transactions/inward", matchPattern: "/transactions/inward.*" },
+      { title: "Outward", icon: ArrowLeft, href: "/transactions/outward", matchPattern: "/transactions/outward.*" },
+    ],
+  },
+  {
     title: "Gauge Management",
     icon: Gauge,
     items: [
       { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list" },
-      // { title: "History", icon: History, href: "/history", matchPattern: "/history.*" },
       { title: "Calibration Certificates", icon: FileText, href: "/gauge-list/calibration-certificates", matchPattern: "/gauge-list/calibration-certificates.*" },
     ],
   },
-  { title: "Analytics", icon: BarChart3, href: "/analytics" },
 ]
 
 
@@ -114,9 +120,7 @@ export function AppSidebar() {
               {menuItems.map((item) => {
                 const isActiveMenu = item.href ? isActive(item.href, item.matchPattern) : false;
               
-              return (
-                  <>
-                   {item.items ? (
+                return item.items ? (
                   <Collapsible
                     key={item.title}
                     asChild
@@ -194,11 +198,7 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
-
-                  }
-                </>
-              )
-            })}
+              })}
 
             </SidebarMenu>
           </SidebarGroupContent>
