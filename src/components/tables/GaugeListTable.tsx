@@ -38,7 +38,7 @@ export function GaugeListTable({
     const totalPages = Math.ceil(gauges.length / itemsPerPage)
     const start = (currentPage - 1) * itemsPerPage
     const current = gauges.slice(start, start + itemsPerPage);
-    
+
     function getPageNumbers(current: number, total: number) {
         const delta = 2
         const range = []
@@ -108,46 +108,65 @@ export function GaugeListTable({
                     </TableHeader>
 
                     <TableBody>
-                        {current.map((gauge, i) => (
-                            <TableRow key={gauge.id}>
-                                <TableCell>
-                                    <Checkbox />
-                                </TableCell>
-                                <TableCell>{start + i + 1}</TableCell>
-                                <TableCell>{gauge.master_gauge}</TableCell>
-                                <TableCell>{gauge.identification_number}</TableCell>
-                                <TableCell>{gauge.manf_serial_number}</TableCell>
-                                <TableCell>{gauge.calibration_frequency} {gauge.calibration_frequency_unit}</TableCell>
-                                <TableCell>
-                                    {gauge.make}
-                                </TableCell>
-                                <TableCell>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem onClick={() => handleViewHistory(gauge.id)}>
-                                                <FileText className="mr-2 h-4 w-4" /> View History
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem 
-                                                onClick={() => handleOutward(gauge.id)}
-                                                disabled={isUpdating === gauge.id || gauge.status === 'inward_pending'}
-                                                className="text-blue-600 focus:text-blue-600"
-                                            >
-                                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                                {isUpdating === gauge.id ? 'Updating...' : 'Mark for Outward'}
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                        {gauges.length > 0 ? (
+                            current.map((gauge, i) => (
+                                <TableRow key={gauge.id}>
+                                    <TableCell>
+                                        <Checkbox />
+                                    </TableCell>
+                                    <TableCell>{start + i + 1}</TableCell>
+                                    <TableCell>{gauge.master_gauge}</TableCell>
+                                    <TableCell>{gauge.identification_number}</TableCell>
+                                    <TableCell>{gauge.manf_serial_number}</TableCell>
+                                    <TableCell>
+                                        {gauge.calibration_frequency} {gauge.calibration_frequency_unit}
+                                    </TableCell>
+                                    <TableCell>{gauge.make}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+                                                <DropdownMenuItem onClick={() => handleViewHistory(gauge.id)}>
+                                                    <FileText className="mr-2 h-4 w-4" />
+                                                    View History
+                                                </DropdownMenuItem>
+
+                                                <DropdownMenuSeparator />
+
+                                                <DropdownMenuItem
+                                                    onClick={() => handleOutward(gauge.id)}
+                                                    disabled={
+                                                        isUpdating === gauge.id ||
+                                                        gauge.status === "inward_pending"
+                                                    }
+                                                    className="text-blue-600 focus:text-blue-600"
+                                                >
+                                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                                    {isUpdating === gauge.id
+                                                        ? "Updating..."
+                                                        : "Mark for Outward"}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+                                    No gauges found
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
+
                 </Table>
             </div>
 

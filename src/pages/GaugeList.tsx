@@ -21,7 +21,7 @@ export default function GaugeListPage() {
       const matchesSearch =
         searchQuery === "" ||
         gauge.master_gauge.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gauge.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        gauge.identification_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
         gauge.manf_serial_number?.toLowerCase().includes(searchQuery.toLowerCase())
       return matchesSearch
     })
@@ -57,19 +57,6 @@ export default function GaugeListPage() {
     )
   }
 
-  if (!filteredGauges.length) {
-    return (
-      <Card className="p-10 flex flex-col items-center gap-4">
-        <Package className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">No gauges found</p>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Add Gauge
-        </Button>
-      </Card>
-    )
-  }
-
-  /* ---------------- UI ---------------- */
 
   return (
     <div className="space-y-6 w-full">
@@ -84,7 +71,7 @@ export default function GaugeListPage() {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <Input
-          placeholder="Search by name, ID, or serial..."
+          placeholder="Search by name, Identification Number, or Serial Number..."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)

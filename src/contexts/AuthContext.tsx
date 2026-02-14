@@ -55,7 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     await authService.login(data)
-    const auth = authService.getAuthContext()
+    const auth = authService.getAuthContext();
+    // const user.  = authService.getAuthContext().user
     const user = auth?.user as unknown as User
     if (!auth) throw new Error('Auth context not found after login')
     setUser({

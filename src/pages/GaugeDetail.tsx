@@ -13,155 +13,146 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  ArrowLeft,
-  Download,
-  FileText,
-  Eye,
-  Printer,
-  X
-} from "lucide-react"
+import { ArrowLeft, Download, Eye, Printer } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useState, useCallback, useRef, useEffect } from "react"
+import { CalibrationHistoryReport } from "@/components/reports/CalibrationHistoryReport"
+import type { GaugeHistory } from "@/types/api"
 
+type CertificatePreviewRecord = GaugeHistory & {
+  gauge_name?: string
+}
 
 export function GaugeDetail() {
   usePageTitle()
   const { id } = useParams()
 
-  // Certificate preview modal state
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
-  const [selectedCertificateUrl, setSelectedCertificateUrl] = useState<any | null>(null)
+  const [selectedCertificateUrl, setSelectedCertificateUrl] = useState<CertificatePreviewRecord | null>(null)
   const [isPrinting, setIsPrinting] = useState(false)
   const [iframeLoaded, setIframeLoaded] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  // ✅ Optimized: Fetch only specific gauge instead of all gauges
-  const { data: gauge, isLoading: isLoadingGauge } = useGaugeDetail(id as string);
-  const { data: gaugeHistory, isLoading: isLoadingGaugeHistory } = useGaugeHistory(id as string);
+  const { data: gauge, isLoading: isLoadingGauge } = useGaugeDetail(id as string)
+  const { data: gaugeHistory, isLoading: isLoadingGaugeHistory } = useGaugeHistory(id as string)
 
-  const isLoading = isLoadingGauge || isLoadingGaugeHistory;
+  const isLoading = isLoadingGauge || isLoadingGaugeHistory
 
-  // Handle iframe loading
   useEffect(() => {
     if (selectedCertificateUrl) {
-      setIframeLoaded(false);
+      setIframeLoaded(false)
     }
-  }, [selectedCertificateUrl]);
+  }, [selectedCertificateUrl])
 
-  // Reset state when modal closes
   useEffect(() => {
     if (!isPreviewModalOpen) {
-      setIframeLoaded(false);
-      setIsPrinting(false);
+      setIframeLoaded(false)
+      setIsPrinting(false)
     }
-  }, [isPreviewModalOpen]);
+  }, [isPreviewModalOpen])
 
-  // Open preview modal
-  const openPreviewModal = useCallback((certificateData: any) => {
-    setSelectedCertificateUrl(certificateData);
-    setIsPreviewModalOpen(true);
-  }, []);
+  const openPreviewModal = useCallback((certificateData: CertificatePreviewRecord) => {
+    setSelectedCertificateUrl(certificateData)
+    setIsPreviewModalOpen(true)
+  }, [])
 
-  
-const handleDownloadCertificate = useCallback(
-  async (
-    certificateUrl?: string,
-    gaugeName?: string,
-    gaugeLabId?: string
-  ) => {
-    if (!certificateUrl) {
-      toast.error("Certificate URL not available");
-      return;
-    }
+  const gaugeOverviewItems = [
+    { label: "Gauge Name", value: gauge?.master_gauge || "N/A" },
+    { label: "Serial Number", value: gauge?.manf_serial_number || "N/A" },
+    { label: "Identification Number", value: gauge?.identification_number || "N/A" },
+    { label: "Make", value: gauge?.make || "N/A" },
+    {
+      label: "Calibration Frequency",
+      value: gauge?.calibration_frequency
+        ? `${gauge.calibration_frequency} ${gauge?.calibration_frequency_unit || ""}`
+        : "N/A",
+    },
+    { label: "Location", value: gauge?.calibration_location || "N/A" },
+  ]
 
-    try {
-      const response = await fetch(certificateUrl, {
-        credentials: "include", // VERY important if cookies are used
-      });
-
-      if (!response.ok) {
-        throw new Error("Download failed");
+  const handleDownloadCertificate = useCallback(
+    async (certificateUrl?: string, gaugeName?: string, gaugeLabId?: string) => {
+      if (!certificateUrl) {
+        toast.error("Certificate URL not available")
+        return
       }
 
-      const blob = await response.blob();
+      try {
+        const response = await fetch(certificateUrl, {
+          credentials: "include",
+        })
 
-      const safeName = `${gaugeName ?? "certificate"}_${gaugeLabId ?? ""}`
-        .replace(/[^\w\d_-]/g, "_");
+        if (!response.ok) {
+          throw new Error("Download failed")
+        }
 
-      const blobUrl = window.URL.createObjectURL(blob);
+        const blob = await response.blob()
+        const safeName = `${gaugeName ?? "certificate"}_${gaugeLabId ?? ""}`.replace(/[^\w\d_-]/g, "_")
+        const blobUrl = window.URL.createObjectURL(blob)
 
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${safeName}.pdf`;
+        const link = document.createElement("a")
+        link.href = blobUrl
+        link.download = `${safeName}.pdf`
+        link.click()
 
-      link.click();
-
-      window.URL.revokeObjectURL(blobUrl);
-
-      toast.success("Certificate downloaded successfully");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to download certificate");
-    }
-  },
-  []
-);
-
-
+        window.URL.revokeObjectURL(blobUrl)
+        toast.success("Certificate downloaded successfully")
+      } catch (error) {
+        console.error(error)
+        toast.error("Failed to download certificate")
+      }
+    },
+    []
+  )
 
   const handlePrint = useCallback(() => {
     if (!selectedCertificateUrl) {
-      toast.error('Certificate not ready for printing');
-      return;
+      toast.error("Certificate not ready for printing")
+      return
     }
 
-    const certificateUrlWithoutHeader = `${selectedCertificateUrl}?show_header=true`;
-    setIsPrinting(true);
+    const certificateUrlWithoutHeader = `${selectedCertificateUrl}?show_header=true`
+    setIsPrinting(true)
+
     try {
-      // Open certificate in new window for printing
-      const printWindow = window.open(certificateUrlWithoutHeader, '_blank', 'width=800,height=600');
+      const printWindow = window.open(certificateUrlWithoutHeader, "_blank", "width=800,height=600")
 
       if (!printWindow) {
-        toast.error('Please allow popups to print certificate');
-        setIsPrinting(false);
-        return;
+        toast.error("Please allow popups to print certificate")
+        setIsPrinting(false)
+        return
       }
 
-      // Wait for PDF to load, then trigger print dialog automatically
       printWindow.onload = () => {
         setTimeout(() => {
           try {
-            printWindow.focus();
-            printWindow.print();
-            setIsPrinting(false);
+            printWindow.focus()
+            printWindow.print()
+            setIsPrinting(false)
           } catch (err) {
-            console.error('Print error:', err);
-            setIsPrinting(false);
-            toast.info('Certificate opened. Use Ctrl+P (Cmd+P on Mac) to print.');
+            console.error("Print error:", err)
+            setIsPrinting(false)
+            toast.info("Certificate opened. Use Ctrl+P (Cmd+P on Mac) to print.")
           }
-        }, 500);
-      };
+        }, 500)
+      }
 
-      // Fallback timeout in case onload doesn't fire
       setTimeout(() => {
-        setIsPrinting(false);
-      }, 3000);
-
+        setIsPrinting(false)
+      }, 3000)
     } catch (err) {
-      console.error('Print error:', err);
-      toast.error('Failed to open print dialog');
-      setIsPrinting(false);
+      console.error("Print error:", err)
+      toast.error("Failed to open print dialog")
+      setIsPrinting(false)
     }
-  }, [selectedCertificateUrl]);
+  }, [selectedCertificateUrl])
 
-  console.log(gaugeHistory)
   return (
     <>
       {isLoading ? (
-        <Card className="w-full ">
+        <Card className="w-full border-border/60 shadow-sm">
           <CardHeader>
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-1/2" />
@@ -171,109 +162,145 @@ const handleDownloadCertificate = useCallback(
           </CardContent>
         </Card>
       ) : (
-        <>
-          <div className="space-y-6 w-full">
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" asChild>
-                  <Link to="/gauge-list">
-                    <ArrowLeft className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <div>
-                  <h2 className="text-3xl font-bold tracking-tight">{gauge?.master_gauge}</h2>
-                </div>
+        <div className="w-full space-y-6">
+          <div className="flex items-start justify-between gap-4 rounded-xl border border-border/50 bg-card p-4 shadow-sm sm:items-center sm:p-5">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/gauge-list">
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+              <div className="space-y-1">
+                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{gauge?.master_gauge}</h2>
+                <p className="text-sm text-muted-foreground">
+                  Gauge ID: <span className="font-medium text-foreground">{gauge?.identification_number || "N/A"}</span>
+                </p>
               </div>
-
             </div>
-            {/* Main Content */}
-            <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="history">Calibration History</TabsTrigger>
-                <TabsTrigger value="performance">Performance</TabsTrigger>
-              </TabsList>
+          </div>
 
-              <TabsContent value="overview" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium">Basic Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg bg-muted/60 p-1">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="history">Calibration History</TabsTrigger>
+              <TabsTrigger value="report">Report Analysis</TabsTrigger>
+            </TabsList>
 
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Serial Number:</span>
-                        <span className="text-sm font-medium">{gauge?.manf_serial_number}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Identification Number:</span>
-                        <span className="text-sm font-medium">{gauge?.identification_number}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Make:</span>
-                        <span className="text-sm font-medium">{gauge?.make}</span>
-                      </div>
-
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="history" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Calibration History</CardTitle>
-                    <CardDescription>Complete calibration record for this gaugeHistory</CardDescription>
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid gap-4 xl:grid-cols-2">
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader className="space-y-1 pb-3">
+                    <CardTitle className="text-base font-semibold">Gauge Overview</CardTitle>
+                    <CardDescription>Primary details and operational metadata.</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="grid gap-3 sm:grid-cols-2">
+                    {gaugeOverviewItems.map((item) => (
+                      <div
+                        key={item.label}
+                        className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2.5"
+                      >
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                        <p className="mt-1 text-sm font-medium text-foreground break-words">{item.value}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="history" className="space-y-4">
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader className="space-y-1 pb-3">
+                  <CardTitle>Calibration History</CardTitle>
+                  <CardDescription>Complete calibration records for this gauge.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto rounded-xl border border-border/60 bg-background">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>Calibration Date</TableHead>
-                          <TableHead>Calibration Due Date</TableHead>
-                          <TableHead>Lab Id</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableHead className="h-11 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Calibration Date
+                          </TableHead>
+                          <TableHead className="h-11 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Due Date
+                          </TableHead>
+                          <TableHead className="h-11 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Lab ID
+                          </TableHead>
+                          <TableHead className="h-11 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Status
+                          </TableHead>
+                          <TableHead className="h-11 whitespace-nowrap px-4 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {gaugeHistory?.map((record, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{record.certificate_issue_date}</TableCell>
-                            <TableCell>{record.next_calibration_date}</TableCell>
-                            <TableCell>{record.inward_gauge_lab_id}</TableCell>
-                            <TableCell>
-                              <Badge variant={record.status === "calibration_completed" ? "default" : "destructive"} className="capitalize text-center bg-green-600 text-white hover:bg-green-700">
-                                {record.status === "calibration_completed" ? "Completed" : "Pending"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => record.certificate_url && openPreviewModal(record)}
-                                disabled={!record.certificate_url}
-                                title="Preview Certificate"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
+                        {gaugeHistory?.length ? (
+                          gaugeHistory.map((record, index) => (
+                            <TableRow key={index} className="hover:bg-muted/20">
+                              <TableCell className="px-4 py-3 text-sm">
+                                {record.certificate_issue_date || "N/A"}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-sm">
+                                {record.next_calibration_date || "N/A"}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-sm">
+                                {record.inward_gauge_lab_id || "N/A"}
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-sm">
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    record.status === "calibration_completed"
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border-amber-200 bg-amber-50 text-amber-700"
+                                  }
+                                >
+                                  {record.status === "calibration_completed" ? "Completed" : "Pending"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => record.certificate_url && openPreviewModal(record)}
+                                  disabled={!record.certificate_url}
+                                  title="Preview Certificate"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                              No calibration history available for this gauge.
                             </TableCell>
                           </TableRow>
-                        ))}
+                        )}
                       </TableBody>
                     </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-             
-            </Tabs>
-          </div>
-        </>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="report" className="space-y-4">
+              <Card className="border-border/60 shadow-sm">
+                        
+                <CardContent className="pt-0">
+                  <CalibrationHistoryReport gauge={gauge} history={gaugeHistory} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       )}
 
-      {/* Certificate Preview Modal */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
           <DialogHeader className="flex flex-row justify-between items-center border-b bg-white py-2">
@@ -282,7 +309,6 @@ const handleDownloadCertificate = useCallback(
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Print Button */}
               {selectedCertificateUrl && (
                 <Button
                   size="sm"
@@ -291,17 +317,20 @@ const handleDownloadCertificate = useCallback(
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 >
                   <Printer className="w-4 h-4 mr-2" />
-                  {isPrinting ? 'Printing...' : 'Print'}
+                  {isPrinting ? "Printing..." : "Print"}
                 </Button>
               )}
 
-              {/* Download Button */}
               {selectedCertificateUrl && (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    handleDownloadCertificate(selectedCertificateUrl.certificate_url, selectedCertificateUrl.gauge_name ,selectedCertificateUrl.inward_gauge_lab_id);
+                    handleDownloadCertificate(
+                      selectedCertificateUrl.certificate_url,
+                      selectedCertificateUrl.gauge_name,
+                      selectedCertificateUrl.inward_gauge_lab_id
+                    )
                   }}
                   className="font-medium"
                 >
@@ -344,7 +373,5 @@ const handleDownloadCertificate = useCallback(
         </DialogContent>
       </Dialog>
     </>
-
   )
 }
-

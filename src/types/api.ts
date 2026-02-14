@@ -96,4 +96,5 @@ export interface User {
   role: "org_admin" | "org_user" | "org_viewer"
   password: string
   phone: string
+  department: string
 }

@@ -1,5 +1,11 @@
-import { ChevronRight, LayoutDashboard, Gauge, List, FileText, Settings, LogOut, User, Package, ArrowRight, ArrowLeft } from "lucide-react"
-import { Link, useLocation } from "react-router-dom"
+import {
+  ChevronRight, LayoutDashboard, Gauge, List, FileText,
+  // Settings, 
+  LogOut,
+  User,
+  Package, ArrowRight, ArrowLeft
+} from "lucide-react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -24,8 +30,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
+  // DropdownMenuLabel,
+  // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
@@ -66,7 +72,7 @@ const menuItems: MenuItem[] = [
 export function AppSidebar() {
   const location = useLocation()
   const { user, logout } = useAuth()
-  
+  const navigate = useNavigate()
   const isMainMenuActive = (item: typeof menuItems[0]) => {
     if (item.href) {
       return location.pathname === item.href || location.pathname.startsWith(item.href + '/')
@@ -84,16 +90,16 @@ export function AppSidebar() {
   const isActive = useCallback(
     (path: string, matchPattern?: string) => {
       const currentPath = location.pathname;
-  
+
       if (matchPattern) {
         return new RegExp(matchPattern).test(currentPath);
       }
-  
+
       return currentPath.includes(path);
     },
     [location.pathname]
   );
-  
+
   return (
     <Sidebar className="border-r bg-background/80 backdrop-blur-xl">
       {/* HEADER */}
@@ -119,7 +125,7 @@ export function AppSidebar() {
             <SidebarMenu className="space-y-1">
               {menuItems.map((item) => {
                 const isActiveMenu = item.href ? isActive(item.href, item.matchPattern) : false;
-              
+
                 return item.items ? (
                   <Collapsible
                     key={item.title}
@@ -152,7 +158,7 @@ export function AppSidebar() {
                       <CollapsibleContent>
                         <SidebarMenuSub className="mt-1 ml-4 space-y-1 border-l border-primary/30 pl-3">
                           {item.items.map((subItem) => {
-                            const isSubActive = subItem.matchPattern 
+                            const isSubActive = subItem.matchPattern
                               ? new RegExp(subItem.matchPattern).test(location.pathname)
                               : location.pathname === subItem.href || location.pathname.startsWith(subItem.href + '/')
 
@@ -207,7 +213,7 @@ export function AppSidebar() {
 
       {/* FOOTER */}
       <SidebarFooter className="p-4 border-t bg-gradient-to-r from-transparent to-primary/5">
-        <SidebarMenu>
+        {/* <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
@@ -225,7 +231,7 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        </SidebarMenu>
+        </SidebarMenu> */}
 
         {/* USER */}
         <div className="pt-4">
@@ -242,21 +248,18 @@ export function AppSidebar() {
                 </Avatar>
                 <div className="flex flex-col items-start text-left">
                   <span className="text-sm font-medium truncate">{(user?.user?.first_name + " " + user?.user?.last_name) || "User"}</span>
-                  <span className="text-xs text-muted-foreground">View profile</span>
                 </div>
               </Button>
             </DropdownMenuTrigger>
-
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/settings">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
+
+              <DropdownMenuItem
+                className=""
+                onClick={() => navigate('/settings')}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Profile
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={logout}
                 className="text-destructive focus:text-destructive"

@@ -1,12 +1,13 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { useAuth } from '@/contexts/AuthContext'
-import { useOrganizations } from '@/hooks/useOrganizations'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useNavigate } from "react-router-dom"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { useAuth } from "@/contexts/AuthContext"
+import { useOrganizations } from "@/hooks/useOrganizations"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+
 import {
   Form,
   FormControl,
@@ -14,22 +15,30 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
+} from "@/components/ui/form"
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Shield, Gauge } from 'lucide-react'
+} from "@/components/ui/select"
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2 } from "lucide-react"
 
 const loginSchema = z.object({
-  organization_id: z.string().optional(),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  organization_id: z.string().min(1, "Please select an organization"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
@@ -37,89 +46,85 @@ type LoginFormValues = z.infer<typeof loginSchema>
 export function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const { data: organizations, isLoading: isLoadingOrgs } = useOrganizations()
-  const [error, setError] = useState<string>('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { data: organizations, isLoading: isLoadingOrgs } =
+    useOrganizations()
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      organization_id: '',
-      email: '',
-      password: '',
+      organization_id: "",
+      email: "",
+      password: "",
     },
   })
 
-  // Don't auto-select - let user choose their organization
-
   const onSubmit = async (values: LoginFormValues) => {
     try {
-      setError('')
-      setIsSubmitting(true)
-      
-      // Call login and wait for it to complete
-      await login({ email: values.email, password: values.password, organization_id: values.organization_id || '' })
-      
-      // Small delay to ensure auth state and cookies are updated
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Navigate to dashboard on successful login
-      navigate('/', { replace: true })
+      await login(values)
+      navigate("/", { replace: true })
     } catch (err: any) {
-      // Handle API errors
-      console.error('Login error:', err)
-      const errorMessage = 
-        err.response?.data?.message || 
-        err.response?.data?.error ||
-        err.message ||
-        'Login failed. Please check your credentials and try again.'
-      setError(errorMessage)
-      setIsSubmitting(false)
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Login failed. Please try again."
+
+      form.setError("root", {
+        type: "server",
+        message,
+      })
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Gauge className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Calibration Portal</h1>
-          <p className="text-muted-foreground mt-2">Industrial Gauge Management System</p>
-        </div>
+    <div className="relative min-h-screen">
+      {/* Background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: "url(/images/bg.jpeg)",
+          filter: "brightness(0.72)",
+        }}
+      />
 
-        <Card className="border-2 shadow-xl">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <CardTitle className="text-2xl">Sign In</CardTitle>
-            </div>
-            <CardDescription>
-              Enter your credentials to access your account
-            </CardDescription>
+      <div className="absolute inset-0 bg-black/20" />
+
+      <div className="relative flex min-h-screen items-center justify-center px-6 lg:px-20">
+        <Card className="w-full max-w-md bg-white/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.35)] border-0 rounded-2xl">
+          <CardHeader>
+            <CardTitle>
+              <img
+                src="/images/logo.svg"
+                className="h-12"
+                alt="Company Logo"
+              />
+            </CardTitle>
           </CardHeader>
+
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                {/* Organization Selection */}
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-5"
+              >
+                {/* Organization */}
                 <FormField
                   control={form.control}
                   name="organization_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Organization</FormLabel>
+
                       <Select
                         disabled={isLoadingOrgs}
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingOrgs ? "Loading organizations..." : "Select your organization"} />
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select organization" />
                           </SelectTrigger>
                         </FormControl>
+
                         <SelectContent>
                           {organizations?.map((org) => (
                             <SelectItem key={org.id} value={org.id}>
@@ -128,6 +133,7 @@ export function Login() {
                           ))}
                         </SelectContent>
                       </Select>
+
                       <FormMessage />
                     </FormItem>
                   )}
@@ -139,14 +145,17 @@ export function Login() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Email address</FormLabel>
+
                       <FormControl>
                         <Input
                           type="email"
                           placeholder="name@company.com"
+                          className="h-11"
                           {...field}
                         />
                       </FormControl>
+
                       <FormMessage />
                     </FormItem>
                   )}
@@ -159,56 +168,45 @@ export function Login() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Password</FormLabel>
+
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="Enter your password"
+                          placeholder="Enter password"
+                          className="h-11"
                           {...field}
                         />
                       </FormControl>
+
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Error Message */}
-                {error && (
+                {/* Server Error */}
+                {form.formState.errors.root && (
                   <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertDescription>
+                      {form.formState.errors.root.message}
+                    </AlertDescription>
                   </Alert>
                 )}
 
-                {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="w-full"
-                  disabled={isSubmitting}
+                  className="w-full h-12 text-base font-medium shadow-md"
+                  disabled={form.formState.isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    'Sign In'
+                  {form.formState.isSubmitting && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
+                  Sign In
                 </Button>
               </form>
             </Form>
-
-            {/* Footer */}
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              <p>Secure access to calibration management</p>
-            </div>
           </CardContent>
         </Card>
-
-        {/* Additional Info */}
-        <div className="mt-4 text-center text-xs text-muted-foreground">
-          <p>Protected by industry-standard encryption</p>
-        </div>
       </div>
     </div>
   )
 }
-

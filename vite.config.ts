@@ -12,12 +12,12 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0', // Bind to all network interfaces
-    port: 5173,       // Your specified port
+    port: 5174,       // Your specified port
     strictPort: true, // Fail if port is already in use
   },
   preview: {
     host: '0.0.0.0', // Bind to all network interfaces for preview
-    port: 5173,       // Your specified port
+    port: 5174,       // Your specified port
     strictPort: true, // Fail if port is already in use
   },
 })
