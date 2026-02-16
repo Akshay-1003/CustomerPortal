@@ -105,12 +105,7 @@ export function AppSidebar() {
       {/* HEADER */}
       <SidebarHeader className="p-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm">
-            <Gauge className="h-5 w-5" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">
-            Calibration Portal
-          </span>
+         <img src="/images/logo.svg" alt="Logo" />
         </div>
       </SidebarHeader>
 

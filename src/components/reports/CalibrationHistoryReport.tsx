@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import type { Gauge, GaugeHistory } from "@/types/api"
-import { ChevronLeft, ChevronRight, Printer } from "lucide-react"
+import { Printer } from "lucide-react"
 
 type CalibrationRow = {
   certificateNo: string
@@ -43,7 +43,6 @@ const COMPANY = {
   address: "123 Industrial Avenue, Manufacturing District",
   contact: "Tel: +1-555-0123 | Email: calibration@company.com",
 }
-const LOGO_SRC = "/images/logo.svg"
 
 function readSpec(specifications: Record<string, any> | undefined, keys: string[], fallback = "N/A"): string {
   if (!specifications) {
@@ -175,9 +174,6 @@ function renderLabelValue(label: string, value: string) {
 }
 
 export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryReportProps) {
-  const [currentPageIndex, setCurrentPageIndex] = useState(0)
-  const carouselRef = useRef<HTMLDivElement>(null)
-
   const rows = useMemo(() => toCalibrationRows(history), [history])
   const pages = useMemo(() => paginateRows(rows), [rows])
 
@@ -202,46 +198,8 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
     approvedBy: readSpec(gauge?.specifications, ["approved_by"], "Quality Head"),
   }
 
-  useEffect(() => {
-    if (currentPageIndex >= pages.length) {
-      setCurrentPageIndex(0)
-    }
-  }, [currentPageIndex, pages.length])
-
-  useEffect(() => {
-    const node = carouselRef.current
-    if (!node) {
-      return
-    }
-
-    node.scrollTo({
-      left: node.clientWidth * currentPageIndex,
-      behavior: "smooth",
-    })
-  }, [currentPageIndex])
-
   const onPrint = () => {
     window.print()
-  }
-
-  const onScrollCarousel = () => {
-    const node = carouselRef.current
-    if (!node || node.clientWidth === 0) {
-      return
-    }
-
-    const index = Math.round(node.scrollLeft / node.clientWidth)
-    if (index !== currentPageIndex && index >= 0 && index < pages.length) {
-      setCurrentPageIndex(index)
-    }
-  }
-
-  const jumpToPage = (pageNumber: number) => {
-    if (Number.isNaN(pageNumber)) {
-      return
-    }
-    const target = Math.min(Math.max(pageNumber - 1, 0), pages.length - 1)
-    setCurrentPageIndex(target)
   }
 
   const renderTable = (page: ReportPage) => (
@@ -300,12 +258,10 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           {page.type === "full" ? (
             <header className="chr-header-full">
               <div className="chr-company-block">
-                <div className="chr-company-brand">
-                  <div className="">
-                    <h1>{gauge?.client_organization || COMPANY.name}</h1>
-                    <p>{COMPANY.address}</p>
-                    <p>{COMPANY.contact}</p>
-                  </div>
+                <div>
+                  <h2>{gauge?.client_organization || COMPANY.name}</h2>
+                  <p>{COMPANY.address}</p>
+                  <p>{COMPANY.contact}</p>
                 </div>
               </div>
 
@@ -382,55 +338,18 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
   }
 
   return (
-    <div className="chr-report-root chr-report-print-root">
-     
+    <>
+      <div className="chr-actions chr-no-print">
+        <Button size="sm" onClick={onPrint}>
+          <Printer className="h-4 w-4" />
+          Print Report
+        </Button>
+      </div>
 
-        <div className="chr-controls">
-          <div className="chr-nav-group">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPageIndex((index) => Math.max(0, index - 1))}
-              disabled={currentPageIndex === 0}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPageIndex((index) => Math.min(pages.length - 1, index + 1))}
-              disabled={currentPageIndex === pages.length - 1}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <label className="chr-page-jump" htmlFor="chr-page-number">
-              Page
-              <input
-                id="chr-page-number"
-                type="number"
-                min={1}
-                max={pages.length}
-                value={currentPageIndex + 1}
-                onChange={(event) => {
-                  const parsed = Number(event.target.value)
-                  if (Number.isFinite(parsed)) {
-                    jumpToPage(parsed)
-                  }
-                }}
-              />
-              <span>of {pages.length}</span>
-            </label>
-          </div>
+      <div className="chr-report-root chr-report-print-root">
 
-          <div className="chr-nav-group chr-right-controls">
-            <Button size="sm" className="chr-print-btn" onClick={onPrint}>
-              <Printer className="h-4 w-4" />
-              Print Report
-            </Button>
-          </div>
-        </div>
 
-        <div className="chr-carousel" ref={carouselRef} onScroll={onScrollCarousel}>
+        <div className="chr-preview-pages chr-no-print">
           {pages.map((page, pageIndex) => (
             <div className="chr-slide" key={`slide-${pageIndex}`}>
               {renderPage(page, pageIndex)}
@@ -438,112 +357,35 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           ))}
         </div>
 
-      <div className="chr-report-print-only">{pages.map((page, pageIndex) => renderPage(page, pageIndex))}</div>
+        <div className="chr-report-print-only">
+          {pages.map((page, pageIndex) => (
+            <div key={`print-page-${pageIndex}`}>{renderPage(page, pageIndex)}</div>
+          ))}
+        </div>
 
-      <style>{`
+        <style>{`
         .chr-report-root {
+          width: 100%;
+          border: 1px solid #d1d5db;
+        }
+
+        .chr-preview-pages {
           width: 100%;
         }
 
-        .chr-preview-ui {
-          border: 1px solid rgba(148, 163, 184, 0.35);
-          border-radius: 16px;
-          padding: 14px;
-          background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-        }
-
-        .chr-preview-header {
+        .chr-actions {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 10px;
-        }
-
-        .chr-preview-title {
-          margin: 0;
-          font-size: 14px;
-          font-weight: 600;
-          color: #0f172a;
-        }
-
-        .chr-preview-subtitle {
-          margin: 2px 0 0;
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .chr-page-chip {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 5px 10px;
-          border-radius: 999px;
-          border: 1px solid rgba(148, 163, 184, 0.35);
-          background: #ffffff;
-          font-size: 12px;
-          font-weight: 500;
-          color: #334155;
-          white-space: nowrap;
-        }
-
-        .chr-controls {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 14px;
-          padding: 10px;
-          background: #ffffff;
-          border: 1px solid rgba(148, 163, 184, 0.3);
-          border-radius: 12px;
-          flex-wrap: wrap;
-        }
-
-        .chr-nav-group {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .chr-page-jump {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-        }
-
-        .chr-page-jump input {
-          width: 54px;
-          height: 30px;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          padding: 0 8px;
-          background: #f8fafc;
-        }
-
-        .chr-print-btn {
-          margin-left: 4px;
-        }
-
-        .chr-right-controls {
           justify-content: flex-end;
-        }
-
-        .chr-carousel {
-          display: flex;
-          overflow-x: auto;
+          margin-bottom: 8px;
+          margin-top: 8px;
         }
 
         .chr-slide {
-          min-width: 100%;
-          scroll-snap-align: start;
-          display: flex;
-          justify-content: stretch;
-          align-items: flex-start;
-          padding: 10px;
-          box-sizing: border-box;
+          width: 100%;
+        }
+
+        .chr-slide + .chr-slide {
+          margin-top: 10px;
         }
 
         .chr-report-page {
@@ -560,30 +402,14 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
         }
 
         .chr-header-full {
-          border: 1px solid #cbd5e1;
-          padding: 12px;
           margin-bottom: 10px;
         }
 
         .chr-company-block h2 {
           margin: 0;
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 700;
           letter-spacing: 0.2px;
-        }
-
-        .chr-company-brand {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-        }
-
-        .chr-logo {
-          width: 34px;
-          height: 34px;
-          object-fit: contain;
-          flex-shrink: 0;
-          margin-top: 1px;
         }
 
         .chr-company-block p {
@@ -595,8 +421,8 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           margin: 8px 0;
           text-align: center;
           font-size: 14px;
-          border-top: 1px solid #cbd5e1;
-          border-bottom: 1px solid #cbd5e1;
+          border-top: 1px solid #d1d5db;
+          border-bottom: 1px solid #d1d5db;
           padding: 7px 4px;
           font-weight: 700;
         }
@@ -644,14 +470,13 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
         .chr-field-label,
         .chr-field-value {
           padding: 4px 6px;
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .chr-field-label {
           width: 42%;
           border-right: 1px solid #d1d5db;
           font-weight: 700;
-          background: #f8fafc;
         }
 
         .chr-field-value {
@@ -660,23 +485,13 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
         }
 
         .chr-header-compact {
-          border: 1px solid #cbd5e1;
           padding: 8px 10px;
           margin-bottom: 10px;
         }
 
         .chr-company-compact {
-          display: flex;
-          align-items: center;
-          gap: 8px;
           font-size: 12px;
           font-weight: 700;
-        }
-
-        .chr-logo-sm {
-          width: 22px;
-          height: 22px;
-          margin-top: 0;
         }
 
         .chr-title-compact {
@@ -684,8 +499,8 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           font-size: 12px;
           font-weight: 700;
           margin: 4px 0;
-          border-top: 1px solid #cbd5e1;
-          border-bottom: 1px solid #cbd5e1;
+          border-top: 1px solid #d1d5db;
+          border-bottom: 1px solid #d1d5db;
           padding: 4px 0;
         }
 
@@ -706,7 +521,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
         .chr-table th,
         .chr-table td {
           border: 1px solid #d1d5db;
-          font-size: 13px;
+          font-size: 12px;
           text-align: left;
           vertical-align: top;
           padding: 5px 6px;
@@ -717,7 +532,6 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
         .chr-table th {
           font-weight: 700;
-          background: #f8fafc;
         }
 
         .chr-empty-row {
@@ -728,7 +542,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
         .chr-footer {
           margin-top: 10px;
-          border-top: 1px solid #cbd5e1;
+          border-top: 1px solid #d1d5db;
           padding-top: 8px;
           display: flex;
           justify-content: space-between;
@@ -755,30 +569,6 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           display: none;
         }
 
-        @media (max-width: 768px) {
-          .chr-preview-ui {
-            padding: 10px;
-            border-radius: 12px;
-          }
-
-          .chr-preview-header {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-
-          .chr-controls {
-            padding: 8px;
-          }
-
-          .chr-slide {
-            padding: 6px;
-          }
-
-          .chr-right-controls {
-            justify-content: flex-start;
-          }
-        }
-
         @media print {
           body * {
             visibility: hidden !important;
@@ -798,17 +588,20 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             margin: 0;
           }
 
-          .chr-preview-ui {
+          .chr-no-print,
+          .chr-no-print * {
             display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
           }
 
           .chr-report-print-only {
             display: block !important;
+            visibility: visible !important;
           }
 
           .chr-report-page {
-            border: none !important;
-            box-shadow: none !important;
             width: ${A4_WIDTH_PX}px !important;
             min-height: ${A4_HEIGHT_PX}px !important;
             max-height: ${A4_HEIGHT_PX}px !important;
@@ -827,11 +620,6 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
         }
 
         @media print {
-          .chr-header-full,
-          .chr-header-compact {
-            border-color: #000 !important;
-          }
-
           .chr-title-block h1,
           .chr-title-compact,
           .chr-footer {
@@ -846,13 +634,11 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           .chr-field-label {
             border-color: #000 !important;
           }
-
-          .chr-field-label,
-          .chr-table th {
-            background: #fff !important;
-          }
         }
       `}</style>
-    </div>
+      </div>
+
+    </>
+
   )
 }

@@ -108,12 +108,15 @@ export function GaugeDetail() {
   )
 
   const handlePrint = useCallback(() => {
-    if (!selectedCertificateUrl) {
+    const certificateUrl = selectedCertificateUrl?.certificate_url
+
+    if (!certificateUrl) {
       toast.error("Certificate not ready for printing")
       return
     }
 
-    const certificateUrlWithoutHeader = `${selectedCertificateUrl}?show_header=true`
+    const separator = certificateUrl.includes("?") ? "&" : "?"
+    const certificateUrlWithoutHeader = `${certificateUrl}${separator}show_header=true`
     setIsPrinting(true)
 
     try {
@@ -187,7 +190,7 @@ export function GaugeDetail() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid gap-4 xl:grid-cols-1">
                 <Card className="border-border/60 shadow-sm">
                   <CardHeader className="space-y-1 pb-3">
                     <CardTitle className="text-base font-semibold">Gauge Overview</CardTitle>
