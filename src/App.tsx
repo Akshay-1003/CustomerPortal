@@ -13,6 +13,8 @@ import OutwardPage from "./pages/transactions/OutwardPage"
 import { HistoryCardPage } from "./pages/reports/HistoryCard"
 import { HistoryCardDetailPage } from "./pages/reports/HistoryCardDetail"
 import { CalibrationDueReportPage } from "./pages/reports/CalibrationDueReport"
+import GaugeMasterPage from "./pages/GaugeMaster"
+import FormatNumberPage from "./pages/FormatNumber"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { usePageTitle } from "./hooks/usePageTitle"
 import { useAuth } from "./contexts/AuthContext"
@@ -40,6 +42,8 @@ function AppContent() {
       >
         <Route index element={<Dashboard />} />
         <Route path="gauge-list" element={<GaugeListPage />} />
+        <Route path="gauge-list/create" element={<GaugeMasterPage />} />
+        <Route path="gauge-management/format-numbers" element={<FormatNumberPage />} />
         <Route path="gauge/:id" element={<GaugeDetail />} />
         <Route path="gauge-list/history/:id" element={<HistoryCardDetailPage />} />
         <Route path="history" element={<History />} />

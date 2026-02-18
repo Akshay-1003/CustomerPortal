@@ -1,16 +1,18 @@
 import { useState, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CardContent, CardHeader } from "@/components/ui/card"
-import { RefreshCw, Plus, AlertCircle, Package } from "lucide-react"
+import { RefreshCw, Plus, AlertCircle } from "lucide-react"
 import { useGauges } from "@/hooks/useGauges"
 import { GaugeListTable } from "@/components/tables/GaugeListTable"
 import {Skeleton} from "@/components/ui/skeleton"
 const ITEMS_PER_PAGE = 10
 
 export default function GaugeListPage() {
+  const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -61,11 +63,17 @@ export default function GaugeListPage() {
   return (
     <div className="space-y-6 w-full">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold">Gauge List</h2>
-        <p className="text-muted-foreground">
-          Manage and track all your gauges
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-3xl font-bold">Gauge List</h2>
+          <p className="text-muted-foreground">
+            Manage and track all your gauges
+          </p>
+        </div>
+        <Button onClick={() => navigate("/gauge-list/create")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Gauge Master
+        </Button>
       </div>
 
       {/* Filters */}

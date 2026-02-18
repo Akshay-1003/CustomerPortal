@@ -1,0 +1,86 @@
+.hcl-print-preview-root {
+  height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hcl-print-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.hcl-print-org-name {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.hcl-print-org-address {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.hcl-print-preview-header-actions {
+  flex-shrink: 0;
+}
+
+.hcl-print-preview-body {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 8px;
+  background: #f3f4f6;
+}
+
+.hcl-preview-sheet {
+  width: 100%;
+  min-width: 1100px;
+  margin: 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  color: #111827;
+  font-family: Arial, sans-serif;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.hcl-preview-title {
+  margin: 4px 0 6px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.hcl-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.hcl-preview-table th,
+.hcl-preview-table td {
+  border: 1px solid #6b7280;
+  padding: 4px 5px;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.hcl-preview-table th {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+
+.hcl-col-sn {
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+}

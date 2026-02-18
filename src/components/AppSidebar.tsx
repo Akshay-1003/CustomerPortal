@@ -45,6 +45,7 @@ interface MenuItem {
   icon: any
   href?: string
   matchPattern?: string
+  disabled?: boolean
   items?: MenuItem[]
 }
 
@@ -63,7 +64,15 @@ const menuItems: MenuItem[] = [
     icon: Gauge,
     items: [
       { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list" },
-      { title: "Calibration Certificates", icon: FileText, href: "/gauge-list/calibration-certificates", matchPattern: "/gauge-list/calibration-certificates.*" },
+      { title: "Gauge Master", icon: FileText, href: "/gauge-list/create", matchPattern: "/gauge-list/create.*" },
+      { title: "Format Numbers", icon: FileText, href: "/gauge-management/format-numbers", matchPattern: "/gauge-management/format-numbers.*" },
+      // {
+      //   title: "Calibration Certificates",
+      //   icon: FileText,
+      //   href: "/gauge-list/calibration-certificates",
+      //   matchPattern: "/gauge-list/calibration-certificates.*",
+      //   disabled: true,
+      // },
     ],
   },
   {
@@ -172,11 +181,12 @@ export function AppSidebar() {
                                   isActive={isSubActive}
                                   className={cn(
                                     "rounded-lg px-3 py-2 transition-all duration-300 hover:bg-primary/10 hover:text-primary",
+                                    subItem.disabled && "opacity-50 pointer-events-none hover:bg-transparent hover:text-muted-foreground",
                                     isSubActive &&
                                     "bg-primary/10 text-primary border border-primary/30 shadow-sm font-medium"
                                   )}
                                 >
-                                  <Link to={subItem.href || "#"}>
+                                  <Link to={subItem.disabled ? "#" : (subItem.href || "#")}>
                                     <subItem.icon />
                                     <span>{subItem.title}</span>
                                   </Link>

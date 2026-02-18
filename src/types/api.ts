@@ -23,6 +23,7 @@ export interface GaugeHistory {
   next_calibration_date?: string
   inward_gauge_lab_id?: string
   status?: string
+  gauge_condition?: string
 }
 
 export interface LoginRequest {
@@ -83,12 +84,27 @@ export interface Gauge {
   status?: 'inward_pending' | 'calibration_completed' | 'calibration_due' | 'calibration_expired' | string
   certificate_issue_date?: string
   next_calibration_date?: string
+  reference_standard?: string
+  part_name?: string
 }
 
 export type DynamicGaugeSpecifications = Record<string, unknown>
 
 export interface HistoryCardGauge extends Gauge {
   specifications: DynamicGaugeSpecifications
+}
+
+export interface GaugeMasterOption {
+  id: string
+  name: string
+  certificate_type_id?: string
+  gauge_type?: string
+  has_sub_part?: boolean
+}
+
+export interface CertificateType {
+  id: string
+  name: string
 }
 
 export interface User {

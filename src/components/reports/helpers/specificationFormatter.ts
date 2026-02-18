@@ -296,7 +296,7 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
     }
 
     if (hasValue(specs.standard_specification)) {
-      parts.push(`Std: ${formatNumber(specs.standard_specification)}`)
+      parts.push(`${formatNumber(specs.standard_specification)}`)
     }
 
     if (hasValue(specs.taper_angle)) {
