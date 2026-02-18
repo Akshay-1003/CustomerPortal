@@ -85,6 +85,12 @@ export interface Gauge {
   next_calibration_date?: string
 }
 
+export type DynamicGaugeSpecifications = Record<string, unknown>
+
+export interface HistoryCardGauge extends Gauge {
+  specifications: DynamicGaugeSpecifications
+}
+
 export interface User {
   id: string
   username: string

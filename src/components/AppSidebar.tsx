@@ -3,7 +3,7 @@ import {
   // Settings, 
   LogOut,
   User,
-  Package, ArrowRight, ArrowLeft
+  Package, ArrowRight, ArrowLeft, FileBarChart2
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
@@ -64,6 +64,14 @@ const menuItems: MenuItem[] = [
     items: [
       { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list" },
       { title: "Calibration Certificates", icon: FileText, href: "/gauge-list/calibration-certificates", matchPattern: "/gauge-list/calibration-certificates.*" },
+    ],
+  },
+  {
+    title: "Reports",
+    icon: FileBarChart2,
+    items: [
+      { title: "History Card", icon: FileText, href: "/reports/history-card", matchPattern: "/reports/history-card.*" },
+      { title: "Calibration Due Report", icon: FileText, href: "/reports/calibration-due-report", matchPattern: "/reports/calibration-due-report.*" },
     ],
   },
 ]

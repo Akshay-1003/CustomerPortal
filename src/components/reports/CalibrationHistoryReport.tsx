@@ -2,6 +2,13 @@ import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import type { Gauge, GaugeHistory } from "@/types/api"
 import { Printer } from "lucide-react"
+import {
+  extractGoValue,
+  extractNoGoValue,
+  formatSpecificationByKeys,
+  formatSpecificationForPrint,
+} from "./helpers/specificationFormatter"
+import { DynamicAcceptanceLimitTable } from "./helpers/DynamicAcceptanceLimitTable"
 
 type CalibrationRow = {
   certificateNo: string
@@ -176,19 +183,24 @@ function renderLabelValue(label: string, value: string) {
 export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryReportProps) {
   const rows = useMemo(() => toCalibrationRows(history), [history])
   const pages = useMemo(() => paginateRows(rows), [rows])
+  const specifications = (gauge?.specifications || {}) as Record<string, unknown>
+  const unit = gauge?.unit || "mm"
 
-  const specificationSize =
-    readSpec(gauge?.specifications, ["size", "specification_size", "range"]) || "N/A"
-
-  const referenceStandard = readSpec(gauge?.specifications, [
+  const referenceStandard = formatSpecificationByKeys(specifications, [
     "reference_standard",
     "master_equipment",
     "standard",
-  ])
-
-  const acceptanceCriteria = readSpec(gauge?.specifications, ["acceptance_criteria", "acceptance_limit"])
-  const goLimit = readSpec(gauge?.specifications, ["go_limit", "go", "go_value"])
-  const noGoLimit = readSpec(gauge?.specifications, ["no_go_limit", "nogo", "no_go", "no_go_value"])
+  ], unit, "N/A")
+  const specificationSize = formatSpecificationForPrint(specifications, unit) || "N/A"
+  const acceptanceCriteria = formatSpecificationByKeys(
+    specifications,
+    ["acceptance_criteria", "acceptance_limit"],
+    unit,
+    "N/A"
+  )
+  const goLimit = extractGoValue(specifications.go) || formatSpecificationByKeys(specifications, ["go_limit", "go", "go_value"], unit, "N/A")
+  const noGoLimit =
+    extractNoGoValue(specifications.no_go) || formatSpecificationByKeys(specifications, ["no_go_limit", "nogo", "no_go", "no_go_value"], unit, "N/A")
 
   const footerMeta = {
     documentCode: readSpec(gauge?.specifications, ["document_code", "doc_code"], "DOC-GHC-001"),
@@ -275,17 +287,12 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
               </div>
 
               <div className="chr-acceptance-block">
-                <div className="chr-acceptance-title">Acceptance Limit Table</div>
-                <table className="chr-acceptance-table">
-                  <tbody>
-                    <tr>
-                      <th>Go</th>
-                      <td>{goLimit}</td>
-                      <th>No-Go</th>
-                      <td>{noGoLimit}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div className="chr-acceptance-title">Acceptance Limit</div>
+                <DynamicAcceptanceLimitTable
+                  specifications={specifications}
+                  fallbackGo={goLimit}
+                  fallbackNoGo={noGoLimit}
+                />
               </div>
 
               <div className="chr-gauge-details">
@@ -295,7 +302,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
                   {renderLabelValue("Make", gauge?.make || "N/A")}
                   {renderLabelValue("Serial No", gauge?.manf_serial_number || "N/A")}
                   {renderLabelValue("Part Name", gauge?.master_gauge || "N/A")}
-                  {renderLabelValue("Calibration Agency", gauge?.calibration_location || "N/A")}
+                  {renderLabelValue("Calibration Agency", "NABL Accredited LAB")}
                   {renderLabelValue(
                     "Frequency",
                     gauge?.calibration_frequency

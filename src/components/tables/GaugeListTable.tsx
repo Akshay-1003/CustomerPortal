@@ -72,7 +72,7 @@ export function GaugeListTable({
     const pages = getPageNumbers(currentPage, totalPages)
 
     const handleViewHistory = (gaugeId: string) => {
-        navigate(`/gauge-list/history/${gaugeId}`)
+        navigate(`/reports/history-card/${gaugeId}`)
     }
 
     const handleOutward = async (gaugeId: string) => {

@@ -12,24 +12,24 @@ export function DashboardLayout() {
   const { data: organization } = useOrganizationById(organizationId as string)
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="w-full max-w-full overflow-x-hidden">
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-auto sm:h-16 shrink-0 items-center gap-2 border-b px-2 sm:px-4 py-2 sm:py-0 bg-stone-50 sticky top-0 z-50">
+      <SidebarInset className="min-w-0 max-w-full overflow-x-hidden">
+        <header className="flex h-auto w-full max-w-full sm:h-16 shrink-0 items-center gap-2 border-b px-2 sm:px-4 py-2 sm:py-0 bg-stone-50 sticky top-0 z-50 overflow-x-hidden">
           <SidebarTrigger className="-ml-1 shrink-0" />
           <Separator orientation="vertical" className="mr-2 h-4 hidden sm:block" />
 
           {/* Organization Info */} 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
 
-            <Badge variant="primary" className="text-xl">
+            <Badge variant="primary" className="text-xl max-w-full truncate">
               {organization?.name || 'Loading...'}
 
             </Badge>
            
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-6 w-full min-w-0">
+        <div className="flex flex-1 w-full min-w-0 max-w-full flex-col gap-4 overflow-x-hidden p-3 sm:p-4 md:p-6">
           <div className="w-full max-w-full min-w-0">
             <Outlet />
           </div>
@@ -39,4 +39,3 @@ export function DashboardLayout() {
     </SidebarProvider>
   )
 }
-
