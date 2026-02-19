@@ -1,15 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -20,11 +13,9 @@ import {
 } from "@/components/ui/table"
 import { useGauges } from "@/hooks/useGauges"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
-import { Search, SlidersHorizontal, RotateCcw, Eye } from "lucide-react"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Search, RotateCcw, Eye } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle,PrinterCheckIcon } from "lucide-react"
 import {
   Pagination,
   PaginationContent,
@@ -163,12 +154,6 @@ function getGaugeRemark(gauge: HistoryCardGauge): string {
   return ""
 }
 
-function getPartName(gauge: HistoryCardGauge): string {
-  const partName = gauge.specifications?.part_name
-  if (typeof partName === "string" && partName.trim()) return partName
-  return gauge.master_gauge || "N/A"
-}
-
 function getPageNumbers(current: number, total: number) {
   const delta = 2
   const range = []
@@ -206,20 +191,11 @@ export function HistoryCardPage() {
   const [make, setMake] = useState("all")
   const [remarkMode, setRemarkMode] = useState("all")
   const [selectedRemarkFilters, setSelectedRemarkFilters] = useState<string[]>([])
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
   const [dueStatusFilter, setDueStatusFilter] = useState<"all" | DueStatus>("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
-
-  const makeOptions = useMemo(() => {
-    const values = new Set<string>()
-    typedGauges.forEach((g) => {
-      if (g.make) values.add(g.make)
-    })
-    return [...values].sort((a, b) => a.localeCompare(b))
-  }, [typedGauges])
 
   const baseFiltered = useMemo(() => {
     const items = typedGauges
@@ -498,11 +474,12 @@ export function HistoryCardPage() {
               />
             </div>
             <Button
-              variant="outline"
+              variant="default"
               onClick={handleOpenPrintPreview}
               disabled={filtered.length === 0}
             >
-              Print A4 ({selectedFilteredCount > 0 ? `Selected ${selectedFilteredCount}` : `Filtered ${filtered.length}`})
+              <PrinterCheckIcon className="h-4 w-4" />
+              Print
             </Button>
             <Button variant="default" onClick={resetFilters} className="gap-2">
               <RotateCcw className="h-4 w-4" />

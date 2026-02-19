@@ -8,6 +8,7 @@ export type GaugeListPrintRow = {
   clientOrganization: string
   name: string
   identification: string
+  specifications: string
   serial: string
   frequency: string
   remark: string
@@ -40,6 +41,7 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
           <td>${escapeHtml(row.clientOrganization)}</td>
           <td>${escapeHtml(row.name)}</td>
           <td>${escapeHtml(row.identification)}</td>
+          <td>${escapeHtml(row.specifications)}</td>
           <td>${escapeHtml(row.serial)}</td>
           <td>${escapeHtml(row.frequency)}</td>
           <td>${escapeHtml(row.remark)}</td>
@@ -56,7 +58,7 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
         <meta charset="utf-8" />
         <title>Gauge List Print</title>
         <style>
-          @page { size: A4 portrait; margin: 12mm; }
+          @page { size: A4 portrait; margin: 4mm; }
           * { box-sizing: border-box; }
           body { margin: 0; color: #111; font-family: Arial, sans-serif; }
           .print-header { margin-bottom: 6px; }
@@ -82,7 +84,7 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
         <header class="print-header">
           <div class="company-name">${escapeHtml(companyName)}</div>
           <div class="company-address">${escapeHtml(companyAddress)}</div>
-          <div class="doc-title">GAUGE LIST</div>
+          <div class="doc-title">GAUGE LIST / INSTRUMENT LIST</div>
         </header>
         <table class="print-table">
           <thead>
@@ -91,6 +93,7 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
               <th>Client Organization</th>
               <th>Gauge Name</th>
               <th>Identification</th>
+              <th>Specification</th>
               <th>Serial</th>
               <th>Calibration Frequency</th>
               <th>Remark</th>
@@ -164,6 +167,7 @@ export function GaugeListPrintPreview({
                     <th>Client Organization</th>
                     <th>Gauge Name</th>
                     <th>Identification</th>
+                    <th>Specification</th>
                     <th>Serial</th>
                     <th>Calibration Frequency</th>
                     <th>Remark</th>
@@ -177,6 +181,7 @@ export function GaugeListPrintPreview({
                       <td>{row.clientOrganization}</td>
                       <td>{row.name}</td>
                       <td>{row.identification}</td>
+                      <td>{row.specifications}</td>
                       <td>{row.serial}</td>
                       <td>{row.frequency}</td>
                       <td>{row.remark}</td>

@@ -65,7 +65,7 @@ export default function GaugeListPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold">Gauge List</h2>
+          <h2 className="text-3xl font-bold">Gauge List / Instrument List</h2>
           <p className="text-muted-foreground">
             Manage and track all your gauges
           </p>

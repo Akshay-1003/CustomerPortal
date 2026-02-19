@@ -14,9 +14,10 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, FileText, ArrowLeft } from "lucide-react"
+import { MoreHorizontal, FileText, ArrowLeft, PrinterCheckIcon } from "lucide-react"
 import { gaugeService } from "@/services/gauge.service"
 import { GaugeListPrintPreview, type GaugeListPrintRow } from "./GaugeListPrintPreview"
+import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 
 interface Props {
     gauges: any[]
@@ -52,6 +53,7 @@ export function GaugeListTable({
                 serialNo: i + 1,
                 name: gauge.master_gauge || "N/A",
                 identification: gauge.identification_number || "N/A",
+                specifications: formatSpecificationForPrint(gauge.specifications, gauge.unit || "mm"),
                 serial: gauge.manf_serial_number || "N/A",
                 frequency: gauge.calibration_frequency
                     ? `${gauge.calibration_frequency} ${gauge.calibration_frequency_unit || ""}`
@@ -141,8 +143,9 @@ export function GaugeListTable({
     return (
         <div className="space-y-4">
             <div className="flex justify-end">
-                <Button variant="outline" onClick={onOpenPrintPreview}>
-                    Print A4 ({selectedRows.length > 0 ? `Selected ${selectedRows.length}` : `All ${gauges.length}`})
+                <Button variant="default" onClick={onOpenPrintPreview}>
+                    <PrinterCheckIcon className="h-4 w-4" />
+                    Print
                 </Button>
             </div>
             <div className="rounded-md border overflow-x-auto">
@@ -160,9 +163,9 @@ export function GaugeListTable({
                             <TableHead>Client Organization</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Identification</TableHead>
+                            <TableHead>Specification</TableHead>
                             <TableHead>Serial</TableHead>
                             <TableHead>Calibration Frequency</TableHead>
-                            <TableHead>Remark</TableHead>
                             <TableHead>Make</TableHead>
                             <TableHead>Actions</TableHead>
                             <TableHead />
@@ -184,11 +187,13 @@ export function GaugeListTable({
                                     <TableCell>{gauge.client_organization}</TableCell>
                                     <TableCell>{gauge.master_gauge}</TableCell>
                                     <TableCell>{gauge.identification_number}</TableCell>
+                                    <TableCell>
+                                        {formatSpecificationForPrint(gauge.specifications, gauge.unit) || "N/A"}
+                                    </TableCell>
                                     <TableCell>{gauge.manf_serial_number}</TableCell>
                                     <TableCell>
                                         {gauge.calibration_frequency} {gauge.calibration_frequency_unit}
                                     </TableCell>
-                                    <TableCell>{gauge.gauge_condition}</TableCell>
                                     <TableCell>{gauge.make}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>

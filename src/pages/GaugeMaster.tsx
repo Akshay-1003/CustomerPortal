@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -72,13 +72,6 @@ export function GaugeMasterPage() {
     queryFn: () => mastersService.getCertificateTypes(),
   })
 
-  const selectedMasterGauge = useMemo(() => {
-    return masterGaugeOptions.find((item) => item.id === selectedMasterGaugeId)
-  }, [masterGaugeOptions, selectedMasterGaugeId])
-
-  const selectedCertificateType = useMemo(() => {
-    return certificateTypes.find((item) => item.id === selectedCertificateTypeId)
-  }, [certificateTypes, selectedCertificateTypeId])
 
   const onGaugeMasterChange = (masterGaugeId: string) => {
     form.setValue("master_gauge_id", masterGaugeId, { shouldValidate: true })
