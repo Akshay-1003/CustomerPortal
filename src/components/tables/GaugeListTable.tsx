@@ -15,6 +15,7 @@ import {
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, FileText, ArrowLeft, PrinterCheckIcon } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { gaugeService } from "@/services/gauge.service"
 import { GaugeListPrintPreview, type GaugeListPrintRow } from "./GaugeListPrintPreview"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
@@ -188,7 +189,14 @@ export function GaugeListTable({
                                     <TableCell>{gauge.master_gauge}</TableCell>
                                     <TableCell>{gauge.identification_number}</TableCell>
                                     <TableCell>
-                                        {formatSpecificationForPrint(gauge.specifications, gauge.unit) || "N/A"}
+                                        <Badge
+                                            variant="outline"
+                                            className={
+                                                "border-blue-200 bg-blue-50 text-blue-700"
+                                            }
+                                        >
+                                            {formatSpecificationForPrint(gauge.specifications, gauge.unit) || "N/A"}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>{gauge.manf_serial_number}</TableCell>
                                     <TableCell>

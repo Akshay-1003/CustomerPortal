@@ -1,0 +1,101 @@
+.oc-print-preview-root {
+  height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.oc-print-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.oc-print-org-name {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.oc-print-org-address {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.oc-print-preview-header-actions {
+  justify-self: end;
+  flex-shrink: 0;
+}
+
+.oc-print-preview-body {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 8px;
+  background: #f3f4f6;
+}
+
+.oc-preview-sheet {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  color: #111827;
+  font-family: Arial, sans-serif;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.oc-preview-title {
+  margin: 4px 0 6px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.oc-preview-meta-table,
+.oc-preview-gauges-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.oc-preview-meta-table {
+  margin-bottom: 8px;
+}
+
+.oc-preview-meta-table th,
+.oc-preview-meta-table td,
+.oc-preview-gauges-table th,
+.oc-preview-gauges-table td {
+  border: 1px solid #6b7280;
+  padding: 4px 5px;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.oc-preview-meta-table th,
+.oc-preview-gauges-table th {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+
+.oc-col-sn {
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+}
+
+.oc-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}

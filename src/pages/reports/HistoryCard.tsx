@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -15,7 +16,7 @@ import { useGauges } from "@/hooks/useGauges"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Search, RotateCcw, Eye } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle,PrinterCheckIcon } from "lucide-react"
+import { AlertCircle, PrinterCheckIcon } from "lucide-react"
 import {
   Pagination,
   PaginationContent,
@@ -410,7 +411,7 @@ export function HistoryCardPage() {
   }
 
   return (
-    <div className="space-y-2 w-full">  
+    <div className="space-y-2 w-full">
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-3">
           <div className="space-y-2">
@@ -540,8 +541,16 @@ export function HistoryCardPage() {
                           <TableCell className="whitespace-nowrap">{gauge.identification_number || "N/A"}</TableCell>
                           <TableCell className="whitespace-nowrap">{gauge.manf_serial_number || "N/A"}</TableCell>
                           <TableCell className="whitespace-nowrap" title={specification}>
-                            {specification}
+                            <Badge
+                              variant="outline"
+                              className={
+                                "border-blue-200 bg-blue-50 text-blue-700"
+                              }
+                            >
+                              {specification}
+                            </Badge>
                           </TableCell>
+
                           <TableCell className="whitespace-nowrap">{formatDateDDMMYYYY(gauge.certificate_issue_date)}</TableCell>
                           <TableCell className="whitespace-nowrap">
                             {gauge.calibration_frequency
@@ -565,7 +574,7 @@ export function HistoryCardPage() {
                           <TableCell className="whitespace-nowrap" title={gauge.gauge_condition || "-"}>
                             {gauge.gauge_condition || "-"}
                           </TableCell>
-                        
+
                           <TableCell className="whitespace-nowrap text-right">
                             <Button size="sm" onClick={() => navigate(`/reports/history-card/${gauge.id}`)} className="gap-2">
                               <Eye className="h-4 w-4" />
