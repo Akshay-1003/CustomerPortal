@@ -29,7 +29,7 @@ export function HistoryCardDetailPage() {
 
   return (
     <div className="space-y-5 w-full">
-      <div className="flex items-start justify-between gap-4 rounded-xl border border-border/50 bg-card p-4 shadow-sm">
+      {/* <div className="flex items-start justify-between gap-4 rounded-xl border border-border/50 bg-card p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/reports/history-card">
@@ -43,7 +43,7 @@ export function HistoryCardDetailPage() {
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <Card className="border-border/60 shadow-sm">
      

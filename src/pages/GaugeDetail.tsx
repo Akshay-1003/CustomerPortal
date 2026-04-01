@@ -173,12 +173,12 @@ export function GaugeDetail() {
                   <ArrowLeft className="h-4 w-4" />
                 </Link>
               </Button>
-              <div className="space-y-1">
+              {/* <div className="space-y-1">
                 <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{gauge?.master_gauge}</h2>
                 <p className="text-sm text-muted-foreground">
                   Gauge ID: <span className="font-medium text-foreground">{gauge?.identification_number || "N/A"}</span>
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
 

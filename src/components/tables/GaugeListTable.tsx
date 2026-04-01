@@ -10,11 +10,7 @@ import {
     Pagination, PaginationContent, PaginationItem,
     PaginationLink, PaginationNext, PaginationPrevious
 } from "@/components/ui/pagination"
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-    DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, FileText, ArrowLeft, PrinterCheckIcon } from "lucide-react"
+import { FileText, ArrowLeft, PrinterCheckIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { gaugeService } from "@/services/gauge.service"
 import { GaugeListPrintPreview, type GaugeListPrintRow } from "./GaugeListPrintPreview"
@@ -40,7 +36,7 @@ function GaugeListTableComponent({
     const [isUpdating, setIsUpdating] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
-    
+
     const totalPages = useMemo(() => Math.ceil(gauges.length / itemsPerPage), [gauges.length, itemsPerPage])
     const start = useMemo(() => (currentPage - 1) * itemsPerPage, [currentPage, itemsPerPage])
     const current = useMemo(() => gauges.slice(start, start + itemsPerPage), [gauges, start, itemsPerPage])
@@ -97,7 +93,7 @@ function GaugeListTableComponent({
 
         return rangeWithDots
     }, [])
-    
+
     const pages = useMemo(() => getPageNumbers(currentPage, totalPages), [currentPage, totalPages, getPageNumbers])
 
     const handleViewHistory = useCallback((gaugeId: string) => {
@@ -163,6 +159,7 @@ function GaugeListTableComponent({
                                 />
                             </TableHead>
                             <TableHead>Sr</TableHead>
+                            <TableHead>Actions</TableHead>
                             <TableHead>Client Organization</TableHead>
                             <TableHead>Name</TableHead>
                             <TableHead>Identification</TableHead>
@@ -170,7 +167,6 @@ function GaugeListTableComponent({
                             <TableHead>Serial</TableHead>
                             <TableHead>Calibration Frequency</TableHead>
                             <TableHead>Make</TableHead>
-                            <TableHead>Actions</TableHead>
                             <TableHead />
                         </TableRow>
                     </TableHeader>
@@ -179,6 +175,7 @@ function GaugeListTableComponent({
                         {gauges.length > 0 ? (
                             current.map((gauge, i) => (
                                 <TableRow key={gauge.id}>
+
                                     <TableCell>
                                         <Checkbox
                                             checked={selectedIds.has(gauge.id)}
@@ -187,6 +184,33 @@ function GaugeListTableComponent({
                                         />
                                     </TableCell>
                                     <TableCell>{start + i + 1}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="default"
+                                                onClick={() => handleViewHistory(gauge.id)}
+                                            >
+                                                {/* <FileText className="mr-2 h-4 w-4" /> */}
+                                                View History
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="default" 
+                                                onClick={() => handleOutward(gauge.id)}
+                                                disabled={
+                                                    isUpdating === gauge.id ||
+                                                    gauge.status === "inward_pending"
+                                                }
+                                                // className="text-blue-600 hover:text-blue-700"
+                                            >
+                                                {/* <ArrowLeft className="mr-2 h-4 w-4" /> */}
+                                                {isUpdating === gauge.id
+                                                    ? "Updating..."
+                                                    : "Mark for Outward"}
+                                            </Button>
+                                        </div>
+                                    </TableCell>
                                     <TableCell>{gauge.client_organization}</TableCell>
                                     <TableCell>{gauge.master_gauge}</TableCell>
                                     <TableCell>{gauge.identification_number}</TableCell>
@@ -205,40 +229,7 @@ function GaugeListTableComponent({
                                         {gauge.calibration_frequency} {gauge.calibration_frequency_unit}
                                     </TableCell>
                                     <TableCell>{gauge.make}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
 
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-                                                <DropdownMenuItem onClick={() => handleViewHistory(gauge.id)}>
-                                                    <FileText className="mr-2 h-4 w-4" />
-                                                    View History
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuSeparator />
-
-                                                <DropdownMenuItem
-                                                    onClick={() => handleOutward(gauge.id)}
-                                                    disabled={
-                                                        isUpdating === gauge.id ||
-                                                        gauge.status === "inward_pending"
-                                                    }
-                                                    className="text-blue-600 focus:text-blue-600"
-                                                >
-                                                    <ArrowLeft className="mr-2 h-4 w-4" />
-                                                    {isUpdating === gauge.id
-                                                        ? "Updating..."
-                                                        : "Mark for Outward"}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
                                 </TableRow>
                             ))
                         ) : (

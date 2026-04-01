@@ -20,7 +20,7 @@ export default function GaugeListPage() {
   const debouncedSearch = useDebouncedValue(searchQuery, 300)
 
   const { data: gauges, isLoading, isError, error, refetch } = useGauges()
-  
+
   const filteredGauges = useMemo(() => {
     if (!gauges) return []
     return gauges.filter((gauge) => {
@@ -32,7 +32,7 @@ export default function GaugeListPage() {
       return matchesSearch
     })
   }, [gauges, debouncedSearch])
-  
+
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
     setCurrentPage(1)
@@ -41,7 +41,7 @@ export default function GaugeListPage() {
   /* ---------------- STATES ---------------- */
 
   if (isLoading) {
-    return   <Card className="w-full">
+    return <Card className="w-full">
       <CardHeader>
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="h-4 w-1/2" />

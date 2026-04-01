@@ -2,6 +2,9 @@ import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import type { Gauge, GaugeHistory } from "@/types/api"
 import { Printer } from "lucide-react"
+import { Link } from "react-router-dom"
+import { ArrowLeft } from "lucide-react"
+
 import {
   extractAcceptanceLimitRows,
   formatSpecificationByKeys,
@@ -356,6 +359,12 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
   return (
     <>
       <div className="chr-actions chr-no-print">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/reports/history-card">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+        </Button>
         <Button size="sm" onClick={onPrint}>
           <Printer className="h-4 w-4" />
           Print Report
