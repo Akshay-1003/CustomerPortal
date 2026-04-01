@@ -76,8 +76,8 @@ export function InwardTable({ className }: InwardTableProps) {
     queryKey: ["inward-outward-entries", organizationId],
     queryFn: async () => {
       if (!organizationId) throw new Error("Organization ID is required")
-      const payload = await apiService.get<unknown>("/outward", {
-        params: { client_org_id: organizationId },
+      const payload = await apiService.get<unknown>("/outwards", {
+        params: { org_id: organizationId },
       })
       return asArray<Outward>(payload)
     },
@@ -145,23 +145,8 @@ export function InwardTable({ className }: InwardTableProps) {
     <>
       <Card className={className}>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Inward Processing
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Outward entries for inward flow ({filteredEntries.length} total)
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+           <div className="flex flex-col gap-4 w-full">
             <Input
               placeholder="Search by outward no, id, client, or transport by..."
               value={searchQuery}
@@ -169,9 +154,15 @@ export function InwardTable({ className }: InwardTableProps) {
                 setSearchQuery(e.target.value)
                 setCurrentPage(1)
               }}
-              className="max-w-sm"
             />
           </div>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+
+      
         </CardHeader>
 
         <CardContent>
@@ -193,10 +184,10 @@ export function InwardTable({ className }: InwardTableProps) {
                     <thead>
                       <tr className="border-b bg-muted/50">
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-16">Sr. No.</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Outward No</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward No</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Client</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Transport By</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Outward Date</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward Date</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
@@ -289,6 +280,7 @@ export function InwardTable({ className }: InwardTableProps) {
               : "Address not available"
           }
           gauges={selectedGauges}
+          selectedOutward={selectedOutward}
         />
       )}
     </>

@@ -146,11 +146,11 @@ export function GaugeDetail() {
         setIsPrinting(false)
       }, 3000)
     } catch (err) {
-      console.error("Print error:", err)
-      toast.error("Failed to open print dialog")
-      setIsPrinting(false)
+      console.error('Print error:', err);
+      toast.error('Failed to open print dialog');
+      setIsPrinting(false);
     }
-  }, [selectedCertificateUrl])
+  }, [selectedCertificateUrl]);
 
   return (
     <>

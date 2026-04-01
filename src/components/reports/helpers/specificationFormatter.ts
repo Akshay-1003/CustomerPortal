@@ -3,15 +3,60 @@
  * Extracts concise, readable specification values for print documents.
  */
 
+export const UNITS = [
+  "MM",
+  "μM",
+  "INCH",
+  "KG/CM2",
+  "BAR",
+  "PA",
+  "DEGREE",
+  "°C",
+  "PSI",
+]
+
+const UNIT_DISPLAY_MAP: Record<string, string> = {
+  MM: "mm",
+  "μM": "μm",
+  INCH: "inch",
+  "KG/CM2": "kg/cm2",
+  BAR: "bar",
+  PA: "Pa",
+  DEGREE: "degree",
+  "°C": "°C",
+  PSI: "psi",
+}
+
+function normalizeUnit(unit: unknown): string {
+  const defaultUnit = "mm"
+  if (typeof unit !== "string" || !unit.trim()) return defaultUnit
+
+  const normalizedInput = unit.trim().replace("µ", "μ").toUpperCase()
+  const matched = UNITS.find((allowed) => allowed.replace("µ", "μ").toUpperCase() === normalizedInput)
+  if (!matched) return defaultUnit
+
+  return UNIT_DISPLAY_MAP[matched] || defaultUnit
+}
+
 /**
  * Format a number value for display (4 decimal places for measurements).
  */
 export function formatNumber(value: unknown): string {
-  if (value === null || value === undefined) return ""
-  if (typeof value === "number") return value.toFixed(4)
-  if (typeof value === "string") return value
-  return String(value)
+  if (value === null || value === undefined) return "";
+
+  const num = Number(value);
+
+  if (isNaN(num)) return String(value);
+
+  // If number is exactly 0 → show 4 decimals
+  if (num === 0) {
+    return num.toFixed(4);
+  }
+
+  // For all other numbers → show 3 decimals
+  return num.toFixed(3);
 }
+
 
 /**
  * Check if a value has meaningful data.
@@ -57,6 +102,19 @@ export interface AcceptanceLimitRow {
   specificationLimitMax: string
   specificationLimitMin: string
   wearLimit: string
+}
+
+function isMeaningfulLimitValue(value: string): boolean {
+  const normalized = (value || "").trim().toLowerCase()
+  return normalized !== "" && normalized !== "-" && normalized !== "n/a" && normalized !== "na"
+}
+
+function hasMeaningfulRowData(row: AcceptanceLimitRow): boolean {
+  return (
+    isMeaningfulLimitValue(row.specificationLimitMax) ||
+    isMeaningfulLimitValue(row.specificationLimitMin) ||
+    isMeaningfulLimitValue(row.wearLimit)
+  )
 }
 
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -123,14 +181,26 @@ export function extractAcceptanceLimitRows(
   const specificationTable = toRecord(specifications.specification_table)
   const tableGo = toRecord(specificationTable?.go)
   const tableNoGo = toRecord(specificationTable?.no_go)
-  if (tableGo) rows.push(makeRow("Go", tableGo))
-  if (tableNoGo) rows.push(makeRow("No Go", tableNoGo))
+  if (tableGo) {
+    const row = makeRow("Go", tableGo)
+    if (hasMeaningfulRowData(row)) rows.push(row)
+  }
+  if (tableNoGo) {
+    const row = makeRow("No Go", tableNoGo)
+    if (hasMeaningfulRowData(row)) rows.push(row)
+  }
 
   const go = toRecord(specifications.go)
   const noGo = toRecord(specifications.no_go)
 
-  if (!tableGo && go) rows.push(makeRow("Go", go))
-  if (!tableNoGo && noGo) rows.push(makeRow("No Go", noGo))
+  if (!tableGo && go) {
+    const row = makeRow("Go", go)
+    if (hasMeaningfulRowData(row)) rows.push(row)
+  }
+  if (!tableNoGo && noGo) {
+    const row = makeRow("No Go", noGo)
+    if (hasMeaningfulRowData(row)) rows.push(row)
+  }
 
   const ignoredKeys = new Set([
     "go",
@@ -177,7 +247,8 @@ export function extractAcceptanceLimitRows(
       hasValue(record.limit_min)
 
     if (hasLimitLikeData) {
-      rows.push(makeRow(titleCase(key), record))
+      const row = makeRow(titleCase(key), record)
+      if (hasMeaningfulRowData(row)) rows.push(row)
     }
   })
 
@@ -188,12 +259,15 @@ export function extractAcceptanceLimitRows(
   const inputs = toRecord(specifications.inputs)
   const toleranceInputs = toRecord(inputs?.inputs)
   if (inputs?.method === "tolerance" && toleranceInputs) {
-    rows.push({
+    const row: AcceptanceLimitRow = {
       parameter: "Tolerance",
       specificationLimitMax: pickValue(toleranceInputs, ["upper_tolerance"]),
       specificationLimitMin: pickValue(toleranceInputs, ["lower_tolerance"]),
       wearLimit: "-",
-    })
+    }
+    if (hasMeaningfulRowData(row)) {
+      rows.push(row)
+    }
   }
 
   return rows
@@ -203,6 +277,7 @@ export function extractAcceptanceLimitRows(
  * Format specifications for print display.
  */
 export function formatSpecificationForPrint(specifications: unknown, unit = "mm"): string {
+  const normalizedUnit = normalizeUnit(unit)
   if (specifications === null || specifications === undefined) return "-"
 
   if (typeof specifications === "string") {
@@ -218,7 +293,7 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
 
     if (values.length === 0) return "-"
 
-    const formattedValues = values.map((value) => `${value} ${unit}`)
+    const formattedValues = values.map((value) => `${value} ${normalizedUnit}`)
     if (formattedValues.length <= 4) return formattedValues.join(", ")
     return `${formattedValues.slice(0, 4).join(", ")} (+${formattedValues.length - 4} more)`
   }
@@ -239,7 +314,7 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
           const basicSizeStr = formatNumber(basicSize)
           const upperTolStr = formatNumber(upperTolerance)
           const lowerTolStr = formatNumber(lowerTolerance)
-          parts.push(`${basicSizeStr} (${upperTolStr}/${lowerTolStr}) ${unit}`)
+          parts.push(`${basicSizeStr} (${upperTolStr}/${lowerTolStr}) ${normalizedUnit}`)
           return parts.join("; ")
         }
       }
@@ -249,11 +324,11 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
     const noGoValue = extractNoGoValue(specs.no_go)
 
     if (goValue && noGoValue) {
-      parts.push(`(${goValue} / ${noGoValue}) ${unit}`)
+      parts.push(`(${goValue} / ${noGoValue}) ${normalizedUnit}`)
     } else if (goValue) {
-      parts.push(`${goValue} ${unit}`)
+      parts.push(`${goValue} ${normalizedUnit}`)
     } else if (noGoValue) {
-      parts.push(`${noGoValue} ${unit}`)
+      parts.push(`${noGoValue} ${normalizedUnit}`)
     }
 
     if (specs.range && typeof specs.range === "object") {
@@ -263,7 +338,7 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
       if (min && max) {
         parts.push(`(${min} - ${max}) ${unit}`)
       } else if (min || max) {
-        parts.push(`${min || max} ${unit}`)
+        parts.push(`${min || max} ${normalizedUnit}`)
       }
     }
 
@@ -273,13 +348,13 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
       if (from && to) {
         parts.push(`(${from} - ${to}) ${unit}`)
       } else if (from || to) {
-        parts.push(`${from || to} ${unit}`)
+        parts.push(`${from || to} ${normalizedUnit}`)
       }
     }
 
     const lc = specs.least_count || specs.leastCount
     if (hasValue(lc)) {
-      parts.push(`LC: ${formatNumber(lc)} ${unit}`)
+      parts.push(`LC: ${formatNumber(lc)} ${normalizedUnit}`)
     }
 
     if (specs.basic_size) {
@@ -288,10 +363,10 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
           .map((value) => formatNumber(value))
           .filter(Boolean)
         if (values.length > 0) {
-          parts.push(values.map((value) => `${value} ${unit}`).join(", "))
+          parts.push(values.map((value) => `${value} ${normalizedUnit}`).join("/ "))
         }
       } else if (hasValue(specs.basic_size)) {
-        parts.push(`${formatNumber(specs.basic_size)} ${unit}`)
+        parts.push(`${formatNumber(specs.basic_size)} ${normalizedUnit}`)
       }
     }
 
@@ -306,19 +381,19 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
     if (specs.pitch_dial && typeof specs.pitch_dial === "object") {
       const pd = specs.pitch_dial as Record<string, unknown>
       if (hasValue(pd.specified_limit_max)) {
-        parts.push(`PD: ${formatNumber(pd.specified_limit_max)} ${unit}`)
+        parts.push(`PD: ${formatNumber(pd.specified_limit_max)} ${normalizedUnit}`)
       }
     }
 
     if (hasValue(specs.length) || hasValue(specs.width)) {
       const dimensions: string[] = []
-      if (hasValue(specs.length)) dimensions.push(`L:${formatNumber(specs.length)} ${unit}`)
-      if (hasValue(specs.width)) dimensions.push(`W:${formatNumber(specs.width)} ${unit}`)
+      if (hasValue(specs.length)) dimensions.push(`L:${formatNumber(specs.length)} ${normalizedUnit}`)
+      if (hasValue(specs.width)) dimensions.push(`W:${formatNumber(specs.width)} ${normalizedUnit}`)
       if (dimensions.length > 0) parts.push(dimensions.join(" × "))
     }
 
     if (hasValue(specs.blockSize)) {
-      parts.push(`Block: ${formatNumber(specs.blockSize)} ${unit}`)
+      parts.push(`Block: ${formatNumber(specs.blockSize)} ${normalizedUnit}`)
     }
 
     if (hasValue(specs.specification)) {
@@ -333,7 +408,9 @@ export function formatSpecificationForPrint(specifications: unknown, unit = "mm"
       const min = formatNumber(specs.majorDiameterMin)
       const max = formatNumber(specs.majorDiameterMax)
       if (min || max) {
-        parts.push(`MD: ${min && max ? `${min}-${max} ${unit}` : `${min || max} ${unit}`}`)
+        parts.push(
+          `MD: ${min && max ? `${min}-${max} ${normalizedUnit}` : `${min || max} ${normalizedUnit}`}`
+        )
       }
     }
 
@@ -364,11 +441,12 @@ export function formatSpecificationByKeys(
   fallback = "N/A"
 ): string {
   if (!specifications) return fallback
+  const normalizedUnit = normalizeUnit(unit)
 
   for (const key of keys) {
     const value = specifications[key]
     if (hasValue(value)) {
-      const formatted = formatSpecificationForPrint(value, unit)
+      const formatted = formatSpecificationForPrint(value, normalizedUnit)
       if (formatted && formatted !== "-") {
         return formatted
       }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -8,26 +8,35 @@ import { CardContent, CardHeader } from "@/components/ui/card"
 import { RefreshCw, Plus, AlertCircle } from "lucide-react"
 import { useGauges } from "@/hooks/useGauges"
 import { GaugeListTable } from "@/components/tables/GaugeListTable"
-import {Skeleton} from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useDebouncedValue } from "@/hooks/useDebounce"
+
 const ITEMS_PER_PAGE = 10
 
 export default function GaugeListPage() {
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
+  const debouncedSearch = useDebouncedValue(searchQuery, 300)
 
   const { data: gauges, isLoading, isError, error, refetch } = useGauges()
+  
   const filteredGauges = useMemo(() => {
     if (!gauges) return []
     return gauges.filter((gauge) => {
       const matchesSearch =
-        searchQuery === "" ||
-        gauge.master_gauge.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gauge.identification_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        gauge.manf_serial_number?.toLowerCase().includes(searchQuery.toLowerCase())
+        debouncedSearch === "" ||
+        gauge.master_gauge.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        gauge.identification_number.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        gauge.manf_serial_number?.toLowerCase().includes(debouncedSearch.toLowerCase())
       return matchesSearch
     })
-  }, [gauges, searchQuery])
+  }, [gauges, debouncedSearch])
+  
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setCurrentPage(1)
+  }, [])
 
   /* ---------------- STATES ---------------- */
 
@@ -81,10 +90,7 @@ export default function GaugeListPage() {
         <Input
           placeholder="Search by name, Identification Number, or Serial Number..."
           value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value)
-            setCurrentPage(1)
-          }}
+          onChange={handleSearchChange}
         />
 
         <Button variant="outline" onClick={() => refetch()}>

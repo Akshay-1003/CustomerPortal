@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import type { OutwardGauge } from "@/types/api"
+import type { OutwardGauge, Outward } from "@/types/api"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 import "./InwardOutwardPrintPreview.css"
 
@@ -10,6 +10,7 @@ type InwardOutwardPrintPreviewProps = {
   companyName: string
   companyAddress?: string
   gauges: OutwardGauge[]
+  selectedOutward: Outward
 }
 
 function escapeHtml(value: string): string {
@@ -112,6 +113,7 @@ export function InwardOutwardPrintPreview({
   companyName,
   companyAddress = "Address not available",
   gauges,
+  selectedOutward,
 }: InwardOutwardPrintPreviewProps) {
   const onPrint = () => {
     const iframe = document.createElement("iframe")
@@ -139,7 +141,7 @@ export function InwardOutwardPrintPreview({
       }, 500)
     }, 250)
   }
-
+console.log(gauges)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[96vw] max-w-[96vw] h-[94vh] p-0">
@@ -181,7 +183,7 @@ export function InwardOutwardPrintPreview({
                         <td>{row.manf_serial_number || "N/A"}</td>
                         <td>{row.process || "N/A"}</td>
                         <td>{row.status || "N/A"}</td>
-                        <td>{formatDate(row.inward_date)}</td>
+                        <td>{formatDate(selectedOutward.outward_date)}</td>
                       </tr>
                     ))}
                   </tbody>

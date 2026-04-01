@@ -55,8 +55,8 @@ const menuItems: MenuItem[] = [
     title: "Transactions",
     icon: Package,
     items: [
-      { title: "Inward", icon: ArrowRight, href: "/transactions/inward", matchPattern: "/transactions/inward.*" },
-      { title: "Outward", icon: ArrowLeft, href: "/transactions/outward", matchPattern: "/transactions/outward.*" },
+      { title: "Sent For Calibration", icon: ArrowRight, href: "/transactions/inward", matchPattern: "/transactions/inward.*" },
+      { title: "Received from Calibration", icon: ArrowLeft, href: "/transactions/outward", matchPattern: "/transactions/outward.*" },
     ],
   },
   {

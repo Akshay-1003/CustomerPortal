@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button"
 import type { Gauge, GaugeHistory } from "@/types/api"
 import { Printer } from "lucide-react"
 import {
-  extractGoValue,
-  extractNoGoValue,
+  extractAcceptanceLimitRows,
   formatSpecificationByKeys,
   formatSpecificationForPrint,
 } from "./helpers/specificationFormatter"
@@ -183,7 +182,6 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
   const specifications = (gauge?.specifications || {}) as Record<string, unknown>
   const unit = gauge?.unit || "mm"
-
   const specificationSize = formatSpecificationForPrint(specifications, unit) || "N/A"
   const acceptanceCriteria = formatSpecificationByKeys(
     specifications,
@@ -191,12 +189,11 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
     unit,
     "N/A"
   )
-  const goLimit =
-    extractGoValue((specifications as Record<string, unknown>).go) ||
-    formatSpecificationByKeys(specifications, ["go_limit", "go", "go_value"], unit, "N/A")
-  const noGoLimit =
-    extractNoGoValue((specifications as Record<string, unknown>).no_go) ||
-    formatSpecificationByKeys(specifications, ["no_go_limit", "nogo", "no_go", "no_go_value"], unit, "N/A")
+  const acceptanceRows = useMemo(
+    () => extractAcceptanceLimitRows(specifications),
+    [specifications]
+  )
+  const hasAcceptanceLimit = acceptanceRows.length > 0
 
   const footerMeta = {
     documentCode: readSpec(gauge?.specifications, ["document_code", "doc_code"], "DOC-GHC-001"),
@@ -316,10 +313,12 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
               <section className="chr-section mt-2">
                 {renderInfoGrid(specificationInfo)}
-                <div className="chr-acceptance-wrap">
-                  <h4 className="chr-subtitle">Acceptance Limit</h4>
-                  <DynamicAcceptanceLimitTable specifications={specifications} fallbackGo={goLimit} fallbackNoGo={noGoLimit} />
-                </div>
+                {hasAcceptanceLimit ? (
+                  <div className="chr-acceptance-wrap">
+                    <h4 className="chr-subtitle">Acceptance Limit</h4>
+                    <DynamicAcceptanceLimitTable specifications={specifications} />
+                  </div>
+                ) : null}
               </section>
             </header>
           ) : (

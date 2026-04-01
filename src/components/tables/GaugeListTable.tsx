@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useCallback, memo } from "react"
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table"
@@ -25,10 +25,10 @@ interface Props {
     currentPage: number
     setCurrentPage: (page: number) => void
     itemsPerPage: number
-    onGaugeUpdate?: () => void // Add callback for refresh
+    onGaugeUpdate?: () => void
 }
 
-export function GaugeListTable({
+function GaugeListTableComponent({
     gauges,
     currentPage,
     setCurrentPage,
@@ -40,13 +40,14 @@ export function GaugeListTable({
     const [isUpdating, setIsUpdating] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
-    const totalPages = Math.ceil(gauges.length / itemsPerPage)
-    const start = (currentPage - 1) * itemsPerPage
-    const current = gauges.slice(start, start + itemsPerPage)
-    const allSelected = gauges.length > 0 && selectedIds.size === gauges.length
-    const someSelected = selectedIds.size > 0 && !allSelected
+    
+    const totalPages = useMemo(() => Math.ceil(gauges.length / itemsPerPage), [gauges.length, itemsPerPage])
+    const start = useMemo(() => (currentPage - 1) * itemsPerPage, [currentPage, itemsPerPage])
+    const current = useMemo(() => gauges.slice(start, start + itemsPerPage), [gauges, start, itemsPerPage])
+    const allSelected = useMemo(() => gauges.length > 0 && selectedIds.size === gauges.length, [gauges.length, selectedIds.size])
+    const someSelected = useMemo(() => selectedIds.size > 0 && !allSelected, [selectedIds.size, allSelected])
     const selectedRows = useMemo(() => gauges.filter((g) => selectedIds.has(g.id)), [gauges, selectedIds])
-    const printSourceRows = selectedRows.length > 0 ? selectedRows : gauges
+    const printSourceRows = useMemo(() => selectedRows.length > 0 ? selectedRows : gauges, [selectedRows, gauges])
 
     const printRows = useMemo<GaugeListPrintRow[]>(
         () =>
@@ -66,7 +67,7 @@ export function GaugeListTable({
         [printSourceRows]
     )
 
-    function getPageNumbers(current: number, total: number) {
+    const getPageNumbers = useCallback((current: number, total: number) => {
         const delta = 2
         const range = []
         const rangeWithDots: (number | string)[] = []
@@ -95,51 +96,52 @@ export function GaugeListTable({
         }
 
         return rangeWithDots
-    }
-    const pages = getPageNumbers(currentPage, totalPages)
+    }, [])
+    
+    const pages = useMemo(() => getPageNumbers(currentPage, totalPages), [currentPage, totalPages, getPageNumbers])
 
-    const handleViewHistory = (gaugeId: string) => {
+    const handleViewHistory = useCallback((gaugeId: string) => {
         navigate(`/reports/history-card/${gaugeId}`)
-    }
+    }, [navigate])
 
-    const handleOutward = async (gaugeId: string) => {
+    const handleOutward = useCallback(async (gaugeId: string) => {
         try {
             setIsUpdating(gaugeId)
             await gaugeService.updateGaugeStatus(gaugeId, 'inward_pending')
             toast.success('Gauge status updated to outward processing')
-            onGaugeUpdate?.() // Refresh the data
+            onGaugeUpdate?.()
         } catch (error) {
             console.error('Error updating gauge status:', error)
             toast.error('Failed to update gauge status')
         } finally {
             setIsUpdating(null)
         }
-    }
+    }, [onGaugeUpdate])
 
-    const toggleSelectAll = (checked: boolean) => {
+    const toggleSelectAll = useCallback((checked: boolean) => {
         if (checked) {
             setSelectedIds(new Set(gauges.map((gauge) => gauge.id)))
             return
         }
         setSelectedIds(new Set())
-    }
+    }, [gauges])
 
-    const toggleSelectRow = (id: string, checked: boolean) => {
+    const toggleSelectRow = useCallback((id: string, checked: boolean) => {
         setSelectedIds((prev) => {
             const next = new Set(prev)
             if (checked) next.add(id)
             else next.delete(id)
             return next
         })
-    }
+    }, [])
 
-    const onOpenPrintPreview = () => {
+    const onOpenPrintPreview = useCallback(() => {
         if (printRows.length === 0) {
             toast.error("No gauge rows available to print")
             return
         }
         setIsPrintPreviewOpen(true)
-    }
+    }, [printRows.length])
 
     return (
         <div className="space-y-4">
@@ -297,3 +299,5 @@ export function GaugeListTable({
         </div>
     )
 }
+
+export const GaugeListTable = memo(GaugeListTableComponent)

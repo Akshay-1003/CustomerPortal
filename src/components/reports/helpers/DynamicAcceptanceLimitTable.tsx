@@ -2,34 +2,16 @@ import { extractAcceptanceLimitRows } from "./specificationFormatter"
 
 type DynamicAcceptanceLimitTableProps = {
   specifications?: Record<string, unknown>
-  fallbackGo?: string
-  fallbackNoGo?: string
 }
 
 export function DynamicAcceptanceLimitTable({
   specifications,
-  fallbackGo = "N/A",
-  fallbackNoGo = "N/A",
 }: DynamicAcceptanceLimitTableProps) {
   const rows = extractAcceptanceLimitRows(specifications)
 
-  const resolvedRows =
-    rows.length > 0
-      ? rows
-      : [
-          {
-            parameter: "Go",
-            specificationLimitMax: fallbackGo,
-            specificationLimitMin: "-",
-            wearLimit: "-",
-          },
-          {
-            parameter: "No Go",
-            specificationLimitMax: fallbackNoGo,
-            specificationLimitMin: "-",
-            wearLimit: "-",
-          },
-        ]
+  if (rows.length === 0) {
+    return null
+  }
 
   return (
     <table className="chr-acceptance-table">
@@ -42,7 +24,7 @@ export function DynamicAcceptanceLimitTable({
         </tr>
       </thead>
       <tbody>
-        {resolvedRows.map((row) => (
+        {rows.map((row) => (
           <tr key={`${row.parameter}-${row.specificationLimitMax}-${row.specificationLimitMin}`}>
             <td>{row.parameter}</td>
             <td>{row.specificationLimitMax || "-"}</td>
