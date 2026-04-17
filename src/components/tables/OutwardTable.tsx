@@ -1,16 +1,15 @@
 import { useMemo, useState } from "react"
+import { AxiosError } from "axios"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { RefreshCw, AlertCircle, FileText ,PrinterCheckIcon } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { apiService } from "@/services/api.service"
 import { authService } from "@/services/auth.service"
 import type { Inward, InwardGauge } from "@/types/api"
-import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { OutwardChallanPrintPreview } from "./OutwardChallanPrintPreview"
 
@@ -18,6 +17,15 @@ const ITEMS_PER_PAGE = 10
 
 interface OutwardTableProps {
   className?: string
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof AxiosError) {
+    const apiMessage = (error.response?.data as { message?: string } | undefined)?.message
+    return apiMessage || error.message || fallback
+  }
+  if (error instanceof Error && error.message) return error.message
+  return fallback
 }
 
 function asArray<T>(payload: unknown): T[] {
@@ -38,21 +46,6 @@ function formatDate(value?: string): string {
   return d.toLocaleDateString("en-GB")
 }
 
-function getStatusBadge(status?: string) {
-  switch (status) {
-    case "calibration_completed":
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Completed</Badge>
-    case "inward_pending":
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">Inward Pending</Badge>
-    case "calibration_due":
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">Due Soon</Badge>
-    case "calibration_expired":
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">Overdue</Badge>
-    default:
-      return <Badge variant="secondary">{status || "N/A"}</Badge>
-  }
-}
-
 export function OutwardTable({ className }: OutwardTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
@@ -63,7 +56,7 @@ export function OutwardTable({ className }: OutwardTableProps) {
 
   const organizationId = authService.getOrganizationId()
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["outward-entries", organizationId],
     queryFn: async () => {
       if (!organizationId) throw new Error("Organization ID is required")
@@ -75,7 +68,7 @@ export function OutwardTable({ className }: OutwardTableProps) {
     enabled: !!organizationId,
   })
 
-  const outwardEntries = data || []
+  const outwardEntries = useMemo(() => data ?? [], [data])
   console.log("outwardEntries", outwardEntries)
   const filteredEntries = useMemo(() => {
     if (!outwardEntries.length) return []
@@ -104,25 +97,11 @@ export function OutwardTable({ className }: OutwardTableProps) {
       setSelectedInward(entry)
       setSelectedGauges(gauges)
       setIsPreviewOpen(true)
-    } catch (fetchError: any) {
-      toast.error(fetchError?.response?.data?.message || "Failed to load inward gauges for print")
+    } catch (fetchError: unknown) {
+      toast.error(getErrorMessage(fetchError, "Failed to load inward gauges for print"))
     } finally {
       setIsFetchingPrintData(false)
     }
-  }
-
-  if (isLoading) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="aspect-video w-full" />
-        </CardContent>
-      </Card>
-    )
   }
 
   if (isError) {
@@ -130,7 +109,7 @@ export function OutwardTable({ className }: OutwardTableProps) {
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{(error as any)?.message || "Failed to load outward entries"}</AlertDescription>
+        <AlertDescription>{getErrorMessage(error, "Failed to load outward entries")}</AlertDescription>
       </Alert>
     )
   }
@@ -160,39 +139,48 @@ export function OutwardTable({ className }: OutwardTableProps) {
         </CardHeader>
 
         <CardContent>
-          {paginatedEntries.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-2 text-sm font-semibold text-muted-foreground">
-                {searchQuery ? "No outward entries found" : "No outward entries available"}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {searchQuery ? "Try different search keywords" : "Entries will appear when inward records are created"}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Sr No</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward No</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Client</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">DC No</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward Date</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
+          <div className="space-y-4">
+            <div className="rounded-md border">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Sr No</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward No</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Client</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">DC No</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward Date</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading || isFetching ? (
+                      <tr>
+                        <td colSpan={6} className="h-24 px-4 text-center">
+                          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
+                            Loading entries...
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedEntries.map((entry, index) => (
+                    ) : paginatedEntries.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-10 text-center">
+                          <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                          <h3 className="mt-2 text-sm font-semibold text-muted-foreground">
+                            {searchQuery ? "No outward entries found" : "No outward entries available"}
+                          </h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {searchQuery ? "Try different search keywords" : "Entries will appear when inward records are created"}
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedEntries.map((entry, index) => (
                         <tr key={entry.id} className="border-b transition-colors hover:bg-muted/50">
                           <td className="p-4 align-middle">{index + 1}</td>
-
                           <td className="p-4 align-middle">{entry.inward_no}</td>
                           <td className="p-4 align-middle">{entry.client_org_name || "N/A"}</td>
-
                           <td className="p-4 align-middle">{entry.client_dc_no || "N/A"}</td>
                           <td className="p-4 align-middle">{formatDate(entry.inward_date)}</td>
                           <td className="p-4 align-middle">
@@ -207,39 +195,39 @@ export function OutwardTable({ className }: OutwardTableProps) {
                             </Button>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {totalPages > 1 && !isLoading && !isFetching && paginatedEntries.length > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredEntries.length)} of {filteredEntries.length} entries
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
                 </div>
               </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredEntries.length)} of {filteredEntries.length} entries
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -256,4 +244,3 @@ export function OutwardTable({ className }: OutwardTableProps) {
     </>
   )
 }
-

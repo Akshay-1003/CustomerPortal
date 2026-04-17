@@ -1,19 +1,20 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { gaugeService } from '@/services/gauge.service'
 import { authService } from '@/services/auth.service'
 
-export function useGauges() {
+export function useGauges(page: number = 1, limit: number = 10, search?: string) {
   const organizationId = authService.getOrganizationId()
 
   return useQuery({
-    queryKey: ['gauges', organizationId],
+    queryKey: ['gauges', organizationId, page, limit, search],
     queryFn: () => {
       if (!organizationId) {
         throw new Error('Organization ID is required')
       }
-      return gaugeService.getGaugesByOrganization(organizationId)
+      return gaugeService.getGaugesByOrganization(organizationId, page, limit, search)
     },
     enabled: !!organizationId,
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
     retry: 1,
@@ -41,4 +42,3 @@ export function useGaugeDetail(gaugeId: string) {
     retry: 1,
   })
 }
-

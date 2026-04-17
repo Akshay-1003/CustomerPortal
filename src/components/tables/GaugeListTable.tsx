@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
-import { useMemo, useState, useCallback, memo } from "react"
+import { useState, useMemo, useCallback, memo, forwardRef, useImperativeHandle } from "react"
+import { FileText, ArrowLeft } from "lucide-react"
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table"
@@ -10,36 +11,44 @@ import {
     Pagination, PaginationContent, PaginationItem,
     PaginationLink, PaginationNext, PaginationPrevious
 } from "@/components/ui/pagination"
-import { FileText, ArrowLeft, PrinterCheckIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { gaugeService } from "@/services/gauge.service"
 import { GaugeListPrintPreview, type GaugeListPrintRow } from "./GaugeListPrintPreview"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
+import type { HistoryCardGauge } from "@/types/api"
 
 interface Props {
-    gauges: any[]
+    gauges: HistoryCardGauge[]
     currentPage: number
     setCurrentPage: (page: number) => void
     itemsPerPage: number
+    setItemsPerPage?: (itemsPerPage: number) => void
+    totalItems: number
+    totalPages: number
+    isLoading?: boolean
     onGaugeUpdate?: () => void
 }
 
-function GaugeListTableComponent({
+const GaugeListTableComponent = forwardRef<{
+    onOpenPrintPreview: () => void
+}, Props>(function GaugeListTable({
     gauges,
     currentPage,
     setCurrentPage,
     itemsPerPage,
+    setItemsPerPage,
+    totalItems,
+    totalPages,
+    isLoading = false,
     onGaugeUpdate
-}: Props) {
-
+}, ref) {
     const navigate = useNavigate()
     const [isUpdating, setIsUpdating] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
-
-    const totalPages = useMemo(() => Math.ceil(gauges.length / itemsPerPage), [gauges.length, itemsPerPage])
-    const start = useMemo(() => (currentPage - 1) * itemsPerPage, [currentPage, itemsPerPage])
-    const current = useMemo(() => gauges.slice(start, start + itemsPerPage), [gauges, start, itemsPerPage])
+    
+    // Backend pagination - no need for client-side slicing
     const allSelected = useMemo(() => gauges.length > 0 && selectedIds.size === gauges.length, [gauges.length, selectedIds.size])
     const someSelected = useMemo(() => selectedIds.size > 0 && !allSelected, [selectedIds.size, allSelected])
     const selectedRows = useMemo(() => gauges.filter((g) => selectedIds.has(g.id)), [gauges, selectedIds])
@@ -63,6 +72,20 @@ function GaugeListTableComponent({
         [printSourceRows]
     )
 
+    // Expose print function via ref
+    const onOpenPrintPreview = useCallback(() => {
+        if (printRows.length === 0) {
+            toast.error("No gauge rows available to print")
+            return
+        }
+        setIsPrintPreviewOpen(true)
+    }, [printRows.length])
+
+    // Use useImperativeHandle to expose the function
+    useImperativeHandle(ref, () => ({
+        onOpenPrintPreview
+    }), [onOpenPrintPreview])
+
     const getPageNumbers = useCallback((current: number, total: number) => {
         const delta = 2
         const range = []
@@ -79,7 +102,7 @@ function GaugeListTableComponent({
             }
         }
 
-        for (let i of range) {
+        for (const i of range) {
             if (l) {
                 if (i - l === 2) {
                     rangeWithDots.push(l + 1)
@@ -96,14 +119,17 @@ function GaugeListTableComponent({
 
     const pages = useMemo(() => getPageNumbers(currentPage, totalPages), [currentPage, totalPages, getPageNumbers])
 
+    // Debug pagination values
+    console.log('Pagination Debug:', { currentPage, totalPages, pages })
+
     const handleViewHistory = useCallback((gaugeId: string) => {
         navigate(`/reports/history-card/${gaugeId}`)
     }, [navigate])
 
-    const handleOutward = useCallback(async (gaugeId: string) => {
+    const handleMarkForOutward = useCallback(async (id: string) => {
         try {
-            setIsUpdating(gaugeId)
-            await gaugeService.updateGaugeStatus(gaugeId, 'inward_pending')
+            setIsUpdating(id)
+            await gaugeService.updateGaugeStatus(id, 'inward_pending')
             toast.success('Gauge status updated to outward processing')
             onGaugeUpdate?.()
         } catch (error) {
@@ -131,153 +157,186 @@ function GaugeListTableComponent({
         })
     }, [])
 
-    const onOpenPrintPreview = useCallback(() => {
-        if (printRows.length === 0) {
-            toast.error("No gauge rows available to print")
-            return
-        }
-        setIsPrintPreviewOpen(true)
-    }, [printRows.length])
-
     return (
         <div className="space-y-4">
-            <div className="flex justify-end">
-                <Button variant="default" onClick={onOpenPrintPreview}>
-                    <PrinterCheckIcon className="h-4 w-4" />
-                    Print
-                </Button>
-            </div>
-            <div className="rounded-md border overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>
-                                <Checkbox
-                                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
-                                    onCheckedChange={(value) => toggleSelectAll(value === true)}
-                                    aria-label="Select all gauge rows"
-                                />
-                            </TableHead>
-                            <TableHead>Sr</TableHead>
-                            <TableHead>Actions</TableHead>
-                            <TableHead>Client Organization</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Identification</TableHead>
-                            <TableHead>Specification</TableHead>
-                            <TableHead>Serial</TableHead>
-                            <TableHead>Calibration Frequency</TableHead>
-                            <TableHead>Make</TableHead>
-                            <TableHead />
-                        </TableRow>
-                    </TableHeader>
-
-                    <TableBody>
-                        {gauges.length > 0 ? (
-                            current.map((gauge, i) => (
-                                <TableRow key={gauge.id}>
-
-                                    <TableCell>
-                                        <Checkbox
-                                            checked={selectedIds.has(gauge.id)}
-                                            onCheckedChange={(value) => toggleSelectRow(gauge.id, value === true)}
-                                            aria-label={`Select gauge ${gauge.identification_number || gauge.id}`}
-                                        />
-                                    </TableCell>
-                                    <TableCell>{start + i + 1}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="default"
-                                                onClick={() => handleViewHistory(gauge.id)}
-                                            >
-                                                {/* <FileText className="mr-2 h-4 w-4" /> */}
-                                                View History
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="default" 
-                                                onClick={() => handleOutward(gauge.id)}
-                                                disabled={
-                                                    isUpdating === gauge.id ||
-                                                    gauge.status === "inward_pending"
-                                                }
-                                                // className="text-blue-600 hover:text-blue-700"
-                                            >
-                                                {/* <ArrowLeft className="mr-2 h-4 w-4" /> */}
-                                                {isUpdating === gauge.id
-                                                    ? "Updating..."
-                                                    : "Mark for Outward"}
-                                            </Button>
+            <div className="rounded-md border">
+                <div className="overflow-x-auto">
+                    <Table className="min-w-[1350px]">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>
+                                    <Checkbox
+                                        checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                                        onCheckedChange={(value) => toggleSelectAll(value === true)}
+                                        aria-label="Select all gauge rows"
+                                    />
+                                </TableHead>
+                                <TableHead>Serial No</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Identification Number</TableHead>
+                                <TableHead>Serial Number</TableHead>
+                                <TableHead>Make</TableHead>
+                                <TableHead>Specifications</TableHead>
+                                <TableHead>Least Count</TableHead>
+                                <TableHead>Frequency</TableHead>
+                                <TableHead>Condition</TableHead>
+                                <TableHead>Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={11} className="text-center py-8">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                            <span className="text-sm text-muted-foreground">Loading...</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{gauge.client_organization}</TableCell>
-                                    <TableCell>{gauge.master_gauge}</TableCell>
-                                    <TableCell>{gauge.identification_number}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant="outline"
-                                            className={
-                                                "border-blue-200 bg-blue-50 text-blue-700"
-                                            }
-                                        >
-                                            {formatSpecificationForPrint(gauge.specifications, gauge.unit) || "N/A"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{gauge.manf_serial_number}</TableCell>
-                                    <TableCell>
-                                        {gauge.calibration_frequency} {gauge.calibration_frequency_unit}
-                                    </TableCell>
-                                    <TableCell>{gauge.make}</TableCell>
-
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={11} className="text-center py-6 text-gray-500">
-                                    No gauges found
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
+                            ) : gauges.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={11} className="text-center py-6 text-gray-500">
+                                        No gauges found
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                gauges.map((gauge, index) => {
+                                    const serialNumber = ((currentPage - 1) * itemsPerPage) + index + 1
+                                    const specification = formatSpecificationForPrint(gauge.specifications, gauge.unit || "mm")
 
-                </Table>
+                                    return (
+                                        <TableRow key={gauge.id}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.has(gauge.id)}
+                                                    onCheckedChange={(value) => toggleSelectRow(gauge.id, value === true)}
+                                                    aria-label={`Select gauge ${gauge.master_gauge}`}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap font-medium">{serialNumber}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{gauge.master_gauge || "N/A"}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{gauge.identification_number || "N/A"}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{gauge.manf_serial_number || "N/A"}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{gauge.make || "N/A"}</TableCell>
+                                            <TableCell className="whitespace-nowrap" title={specification}>
+                                                <Badge
+                                                    variant="outline"
+                                                    className="border-blue-200 bg-blue-50 text-blue-700"
+                                                >
+                                                    {specification}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap">{gauge.least_count || "N/A"}</TableCell>
+                                            <TableCell className="whitespace-nowrap">
+                                                {gauge.calibration_frequency
+                                                    ? `${gauge.calibration_frequency} ${gauge.calibration_frequency_unit || ""}`
+                                                    : "N/A"}
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap">
+                                                <Badge variant={gauge.gauge_condition === "Good" ? "default" : "secondary"}>
+                                                    {gauge.gauge_condition || "N/A"}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap">
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="bg-blue-100 hover:bg-blue-200 text-blue-700 border-blue-300 px-2 py-1 h-7 text-xs"
+                                                        onClick={() => handleViewHistory(gauge.id)}
+                                                    >
+                                                        <FileText className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300 px-2 py-1 h-7 text-xs"
+                                                        onClick={() => handleMarkForOutward(gauge.id)}
+                                                        disabled={isUpdating === gauge.id}
+                                                    >
+                                                        <ArrowLeft className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
-
-            {totalPages > 1 && (
-                <Pagination>
-                    <PaginationContent>
-
-                        <PaginationItem>
-                            <PaginationPrevious
-                                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            />
-                        </PaginationItem>
-
-                        {pages.map((page, i) => (
-                            <PaginationItem key={i}>
-                                {page === "..." ? (
-                                    <span className="px-3 text-muted-foreground">…</span>
-                                ) : (
-                                    <PaginationLink
-                                        isActive={currentPage === page}
-                                        onClick={() => setCurrentPage(Number(page))}
-                                    >
-                                        {page}
-                                    </PaginationLink>
-                                )}
+            
+            {/* Results Summary */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-muted-foreground mb-4">
+                <span>
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
+                </span>
+                {setItemsPerPage && (
+                    <div className="flex items-center gap-2">
+                        <span>Rows per page:</span>
+                        <Select value={itemsPerPage.toString()} onValueChange={(value) => setItemsPerPage(Number(value))}>
+                            <SelectTrigger className="w-20 h-8">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="25">25</SelectItem>
+                                <SelectItem value="50">50</SelectItem>
+                                <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+            </div>
+            
+            {/* Centered Pagination */}
+            {totalPages >= 1 && (
+                <div className={`flex flex-col items-center gap-4 ${isLoading ? "opacity-70" : ""}`}>
+                    <Pagination>
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious
+                                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                    className={currentPage === 1 || isLoading ? "pointer-events-none opacity-50" : ""}
+                                />
                             </PaginationItem>
-                        ))}
 
-                        <PaginationItem>
-                            <PaginationNext
-                                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                            />
-                        </PaginationItem>
+                            {pages.map((page, i) => (
+                                <PaginationItem key={i}>
+                                    {page === "..." ? (
+                                        <span className="px-3 text-muted-foreground">...</span>
+                                    ) : (
+                                        <PaginationLink
+                                            isActive={currentPage === page}
+                                            onClick={() => {
+                                                if (!isLoading) setCurrentPage(Number(page))
+                                            }}
+                                            className={`${currentPage === page ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""} ${isLoading ? "pointer-events-none opacity-50" : ""}`}
+                                        >
+                                            {page}
+                                        </PaginationLink>
+                                    )}
+                                </PaginationItem>
+                            ))}
 
-                    </PaginationContent>
-                </Pagination>
+                            <PaginationItem>
+                                <PaginationNext
+                                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                                    className={currentPage === totalPages || isLoading ? "pointer-events-none opacity-50" : ""}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                    {totalItems > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                            Page {currentPage} of {totalPages}
+                        </span>
+                    )}
+                </div>
             )}
+          
 
             <GaugeListPrintPreview
                 open={isPrintPreviewOpen}
@@ -289,6 +348,8 @@ function GaugeListTableComponent({
 
         </div>
     )
-}
+})
+
+GaugeListTableComponent.displayName = 'GaugeListTable'
 
 export const GaugeListTable = memo(GaugeListTableComponent)

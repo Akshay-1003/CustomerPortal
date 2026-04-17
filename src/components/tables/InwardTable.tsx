@@ -1,16 +1,15 @@
 import { useMemo, useState } from "react"
+import { AxiosError } from "axios"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { RefreshCw, AlertCircle, Package, Calendar } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { apiService } from "@/services/api.service"
 import { authService } from "@/services/auth.service"
 import type { Outward, OutwardGauge, OutwardGaugesResponse } from "@/types/api"
-import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { InwardOutwardPrintPreview } from "./InwardOutwardPrintPreview"
 
@@ -28,7 +27,7 @@ const getPaginationNumbers = (currentPage: number, totalPages: number) => {
     }
   }
 
-  for (let i of range) {
+  for (const i of range) {
     if (l) {
       if (i - l === 2) rangeWithDots.push(l + 1)
       else if (i - l !== 1) rangeWithDots.push("...")
@@ -62,6 +61,15 @@ interface InwardTableProps {
   className?: string
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof AxiosError) {
+    const apiMessage = (error.response?.data as { message?: string } | undefined)?.message
+    return apiMessage || error.message || fallback
+  }
+  if (error instanceof Error && error.message) return error.message
+  return fallback
+}
+
 export function InwardTable({ className }: InwardTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
@@ -72,7 +80,7 @@ export function InwardTable({ className }: InwardTableProps) {
 
   const organizationId = authService.getOrganizationId()
 
-  const { data: outwardEntries, isLoading, isError, error, refetch } = useQuery({
+  const { data: outwardEntries, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["inward-outward-entries", organizationId],
     queryFn: async () => {
       if (!organizationId) throw new Error("Organization ID is required")
@@ -110,25 +118,11 @@ export function InwardTable({ className }: InwardTableProps) {
       setSelectedOutward(payload.outward_details || entry)
       setSelectedGauges(payload.outward_gauges || [])
       setIsPreviewOpen(true)
-    } catch (fetchError: any) {
-      toast.error(fetchError?.response?.data?.message || "Failed to load outward gauges for print")
+    } catch (fetchError: unknown) {
+      toast.error(getErrorMessage(fetchError, "Failed to load outward gauges for print"))
     } finally {
       setIsFetchingPrintData(false)
     }
-  }
-
-  if (isLoading) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="aspect-video w-full" />
-        </CardContent>
-      </Card>
-    )
   }
 
   if (isError) {
@@ -136,7 +130,7 @@ export function InwardTable({ className }: InwardTableProps) {
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{(error as any)?.message || "Failed to load inward entries"}</AlertDescription>
+        <AlertDescription>{getErrorMessage(error, "Failed to load inward entries")}</AlertDescription>
       </Alert>
     )
   }
@@ -146,53 +140,62 @@ export function InwardTable({ className }: InwardTableProps) {
       <Card className={className}>
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-           <div className="flex flex-col gap-4 w-full">
-            <Input
-              placeholder="Search by outward no, id, client, or transport by..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setCurrentPage(1)
-              }}
-            />
-          </div>
+            <div className="flex flex-col gap-4 w-full">
+              <Input
+                placeholder="Search by outward no, id, client, or transport by..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setCurrentPage(1)
+                }}
+              />
+            </div>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
           </div>
-
-      
         </CardHeader>
 
         <CardContent>
-          {paginatedEntries.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
-              <h3 className="mt-2 text-sm font-semibold text-muted-foreground">
-                {searchQuery ? "No entries found" : "No outward entries available"}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {searchQuery ? "Try adjusting your search terms" : "Entries will appear when outward records are available"}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-md border">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-16">Sr. No.</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward No</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Client</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Transport By</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward Date</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
+          <div className="space-y-4">
+            <div className="rounded-md border">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-16">Sr. No.</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward No</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Client</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Transport By</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Inward Date</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading || isFetching ? (
+                      <tr>
+                        <td colSpan={6} className="h-24 px-4 text-center">
+                          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
+                            Loading entries...
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedEntries.map((entry, index) => (
+                    ) : paginatedEntries.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-10 text-center">
+                          <Package className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                          <h3 className="mt-2 text-sm font-semibold text-muted-foreground">
+                            {searchQuery ? "No entries found" : "No outward entries available"}
+                          </h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {searchQuery ? "Try adjusting your search terms" : "Entries will appear when outward records are available"}
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedEntries.map((entry, index) => (
                         <tr key={entry.id} className="border-b transition-colors hover:bg-muted/50">
                           <td className="p-4 align-middle">{startIndex + index + 1}</td>
                           <td className="p-4 align-middle">{entry.outward_no}</td>
@@ -215,57 +218,57 @@ export function InwardTable({ className }: InwardTableProps) {
                             </Button>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {totalPages > 1 && !isLoading && !isFetching && paginatedEntries.length > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredEntries.length)} of {filteredEntries.length} entries
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {paginationNumbers.map((page, i) => (
+                      <div key={i}>
+                        {page === "..." ? (
+                          <span className="px-3 text-muted-foreground">...</span>
+                        ) : (
+                          <Button
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(Number(page))}
+                            className="w-8 h-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
                 </div>
               </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredEntries.length)} of {filteredEntries.length} entries
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      {paginationNumbers.map((page, i) => (
-                        <div key={i}>
-                          {page === "..." ? (
-                            <span className="px-3 text-muted-foreground">...</span>
-                          ) : (
-                            <Button
-                              variant={currentPage === page ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(Number(page))}
-                              className="w-8 h-8 p-0"
-                            >
-                              {page}
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -286,4 +289,3 @@ export function InwardTable({ className }: InwardTableProps) {
     </>
   )
 }
-

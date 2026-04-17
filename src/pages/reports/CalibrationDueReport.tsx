@@ -19,18 +19,23 @@ import {
 import { useGauges } from "@/hooks/useGauges"
 import { calculateCalibrationDue } from "@/lib/calibrationUtils"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Search } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message
+  return fallback
+}
+
 export function CalibrationDueReportPage() {
-  const { data: gauges, isLoading, isError, error } = useGauges()
+  const { data: response, isLoading, isFetching, isError, error } = useGauges()
+  const gauges = useMemo(() => response?.data || [], [response?.data])
   const [query, setQuery] = useState("")
   const [dueFilter, setDueFilter] = useState("all")
 
   const rows = useMemo(() => {
-    return (gauges || []).map((gauge) => {
+    return gauges.map((gauge) => {
       const due = calculateCalibrationDue(gauge)
       return {
         id: gauge.id,
@@ -68,26 +73,12 @@ export function CalibrationDueReportPage() {
     })
   }, [dueFilter, query, rows])
 
-  if (isLoading) {
-    return (
-      <Card className="w-full border-border/60 shadow-sm">
-        <CardHeader>
-          <Skeleton className="h-5 w-56" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-[360px] w-full" />
-        </CardContent>
-      </Card>
-    )
-  }
-
   if (isError) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{(error as any)?.message || "Failed to load due report"}</AlertDescription>
+        <AlertDescription>{getErrorMessage(error, "Failed to load due report")}</AlertDescription>
       </Alert>
     )
   }
@@ -143,7 +134,16 @@ export function CalibrationDueReportPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRows.length ? (
+                {isLoading || isFetching ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
+                        Loading gauges...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredRows.length ? (
                   filteredRows.map(({ id, gauge, due }) => (
                     <TableRow key={id} className="hover:bg-muted/20">
                       <TableCell className="font-medium">{gauge.master_gauge || "N/A"}</TableCell>

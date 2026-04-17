@@ -13,7 +13,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useGauges } from "@/hooks/useGauges"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Search, RotateCcw, Eye } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, PrinterCheckIcon } from "lucide-react"
@@ -41,6 +40,11 @@ const REMARK_QUICK_FILTERS = [
   { id: "rework", label: "Rework", keywords: ["rework"] },
   { id: "not_in_use", label: "Not in Use", keywords: ["not in use", "inactive"] },
 ] as const
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message
+  return fallback
+}
 
 function toLower(value?: string) {
   return (value || "").toLowerCase()
@@ -184,9 +188,6 @@ function getPageNumbers(current: number, total: number) {
 
 export function HistoryCardPage() {
   const navigate = useNavigate()
-  const { data: gauges, isLoading, isError, error } = useGauges()
-  const typedGauges = (gauges || []) as HistoryCardGauge[]
-
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
   const [make, setMake] = useState("all")
@@ -198,49 +199,47 @@ export function HistoryCardPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
 
-  const baseFiltered = useMemo(() => {
-    const items = typedGauges
+  const { data: response, isLoading, isFetching, isError, error } = useGauges(currentPage, itemsPerPage, search)
+  const gauges = response?.data || []
+  const totalItems = response?.total || 0
+  const typedGauges = gauges as HistoryCardGauge[]
+  const isTableLoading = isLoading || isFetching
 
-    const filteredItems = items.filter((gauge) => {
+  const baseFiltered = useMemo(() => {
+    const filteredItems = typedGauges.filter((gauge) => {
       const gauge_condition = getGaugeRemark(gauge)
       const normalizedRemark = toLower(gauge_condition)
 
       const matchesSearch =
         !search ||
         toLower(gauge.master_gauge).includes(toLower(search)) ||
-        toLower(gauge.identification_number).includes(toLower(search)) ||
-        toLower(gauge.manf_serial_number).includes(toLower(search)) ||
-        normalizedRemark.includes(toLower(search))
+        toLower(gauge.identification_number || "").includes(toLower(search)) ||
+        toLower(gauge.manf_serial_number || "").includes(toLower(search))
 
-      const matchesStatus = status === "all" ? true : gauge.status === status
-      const matchesMake = make === "all" ? true : gauge.make === make
-
+      const matchesStatus = status === "all" || gauge.status === status
+      const matchesMake = make === "all" || gauge.make === make
       const matchesRemarkMode =
-        remarkMode === "all"
-          ? true
-          : remarkMode === "with"
-            ? Boolean(normalizedRemark)
-            : !normalizedRemark
+        remarkMode === "all" ||
+        (remarkMode === "with_remark" && normalizedRemark !== "no remark") ||
+        (remarkMode === "no_remark" && normalizedRemark === "no remark")
 
-      const matchesQuickRemark =
-        selectedRemarkFilters.length === 0
-          ? true
-          : selectedRemarkFilters.some((filterId) => {
-            const filter = REMARK_QUICK_FILTERS.find((item) => item.id === filterId)
-            if (!filter) return true
+      const matchesRemarkFilters =
+        selectedRemarkFilters.length === 0 ||
+        selectedRemarkFilters.some((filter) => normalizedRemark.includes(filter))
 
-            if (filter.id === "accept") {
-              return (
-                normalizedRemark.includes("accept") &&
-                !normalizedRemark.includes("conditional") &&
-                !normalizedRemark.includes("not ok")
-              )
-            }
+      const matchesDueStatus =
+        dueStatusFilter === "all" ||
+        (dueStatusFilter === "due_today" && gauge.next_calibration_date) ||
+        (dueStatusFilter === "overdue" && gauge.next_calibration_date && gauge.next_calibration_date < new Date().toISOString().split('T')[0])
 
-            return filter.keywords.some((keyword) => normalizedRemark.includes(keyword))
-          })
-
-      return matchesSearch && matchesStatus && matchesMake && matchesRemarkMode && matchesQuickRemark
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesMake &&
+        matchesRemarkMode &&
+        matchesRemarkFilters &&
+        matchesDueStatus
+      )
     })
 
     return [...filteredItems].sort((a, b) => {
@@ -253,7 +252,7 @@ export function HistoryCardPage() {
 
       return dueA.sortValue - dueB.sortValue
     })
-  }, [typedGauges, make, remarkMode, search, selectedRemarkFilters, status])
+  }, [typedGauges, search, status, make, remarkMode, selectedRemarkFilters, dueStatusFilter])
 
   const filtered = useMemo(() => {
     if (dueStatusFilter === "all") {
@@ -284,15 +283,13 @@ export function HistoryCardPage() {
     setCurrentPage(1)
   }, [search, status, make, remarkMode, selectedRemarkFilters, itemsPerPage, dueStatusFilter])
 
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    return filtered.slice(start, start + itemsPerPage)
-  }, [currentPage, filtered, itemsPerPage])
+  // For backend pagination, the API already returns the correct page data
+  const paginated = filtered
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage))
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
   const pages = getPageNumbers(currentPage, totalPages)
 
-  const filteredIds = useMemo(() => new Set(filtered.map((g) => g.id)), [filtered])
+  const filteredIds = useMemo(() => new Set(paginated.map((g) => g.id)), [paginated])
   const selectedFilteredCount = useMemo(() => {
     let count = 0
     selectedIds.forEach((id) => {
@@ -300,7 +297,7 @@ export function HistoryCardPage() {
     })
     return count
   }, [filteredIds, selectedIds])
-  const allFilteredSelected = filtered.length > 0 && selectedFilteredCount === filtered.length
+  const allFilteredSelected = paginated.length > 0 && selectedFilteredCount === paginated.length
   const someFilteredSelected = selectedFilteredCount > 0 && !allFilteredSelected
 
   useEffect(() => {
@@ -386,26 +383,12 @@ export function HistoryCardPage() {
     setIsPrintPreviewOpen(true)
   }
 
-  if (isLoading) {
-    return (
-      <Card className="w-full border-border/60 shadow-sm">
-        <CardHeader>
-          <Skeleton className="h-5 w-52" />
-          <Skeleton className="h-4 w-80" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-[380px] w-full" />
-        </CardContent>
-      </Card>
-    )
-  }
-
   if (isError) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{(error as any)?.message || "Failed to load gauges"}</AlertDescription>
+        <AlertDescription>{getErrorMessage(error, "Failed to load gauges")}</AlertDescription>
       </Alert>
     )
   }
@@ -517,7 +500,16 @@ export function HistoryCardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginated.length ? (
+                  {isTableLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={15} className="h-24 text-center">
+                        <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
+                          Loading gauges...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginated.length ? (
                     paginated.map((gauge, index) => {
                       const rowId = (currentPage - 1) * itemsPerPage + index + 1
                       const specification = formatSpecificationForPrint(gauge.specifications, gauge.unit || "mm")
@@ -586,7 +578,7 @@ export function HistoryCardPage() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={17} className="h-20 text-center text-muted-foreground">
+                      <TableCell colSpan={15} className="h-20 text-center text-muted-foreground">
                         No gauges match the selected filters.
                       </TableCell>
                     </TableRow>
@@ -597,12 +589,13 @@ export function HistoryCardPage() {
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-4 flex justify-end">
+            <div className={`mt-4 flex justify-end ${isTableLoading ? "opacity-70" : ""}`}>
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      className={isTableLoading ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
 
@@ -613,7 +606,10 @@ export function HistoryCardPage() {
                       ) : (
                         <PaginationLink
                           isActive={currentPage === page}
-                          onClick={() => setCurrentPage(Number(page))}
+                          onClick={() => {
+                            if (!isTableLoading) setCurrentPage(Number(page))
+                          }}
+                          className={isTableLoading ? "pointer-events-none opacity-50" : ""}
                         >
                           {page}
                         </PaginationLink>
@@ -624,6 +620,7 @@ export function HistoryCardPage() {
                   <PaginationItem>
                     <PaginationNext
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      className={isTableLoading ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
                 </PaginationContent>

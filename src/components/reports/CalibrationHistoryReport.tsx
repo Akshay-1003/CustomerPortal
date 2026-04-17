@@ -427,6 +427,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             display: flex;
             flex-direction: column;
             font-family: Arial, sans-serif;
+            font-size:14px;
           }
 
           .chr-header-full {
@@ -463,6 +464,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
           .chr-section {
             margin-bottom: 10px;
+            font-size:12px;
           }
 
           .chr-section-title {

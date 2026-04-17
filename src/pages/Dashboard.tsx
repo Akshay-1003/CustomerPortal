@@ -72,7 +72,8 @@ import type { Gauge } from '@/types/api'
 
 export function Dashboard() {
   const organizationId = authService.getOrganizationId()
-  const { data: gauges, isLoading, isError, error } = useGauges()
+  const { data: response, isLoading, isError, error } = useGauges()
+  const gauges = response?.data || []
   
   // Analytics state
   const currentYear = new Date().getFullYear()
