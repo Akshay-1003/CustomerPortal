@@ -3,7 +3,8 @@ import {
   // Settings, 
   LogOut,
   User,
-  Package, ArrowRight, ArrowLeft, FileBarChart2
+  Package, ArrowRight, ArrowLeft, FileBarChart2, Activity, CalendarDays, Cpu,
+  type LucideIcon,
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
@@ -42,7 +43,7 @@ import { useCallback } from "react"
 
 interface MenuItem {
   title: string
-  icon: any
+  icon: LucideIcon
   href?: string
   matchPattern?: string
   disabled?: boolean
@@ -51,6 +52,9 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, href: "/" },
+  { title: "Calibration Overview", icon: Activity, href: "/analytics", matchPattern: "/analytics.*" },
+  { title: "Monthly Planning", icon: CalendarDays, href: "/monthly-planning", matchPattern: "/monthly-planning.*" },
+  { title: "Gauge Life Prediction", icon: Cpu, href: "/gauge-life-prediction", matchPattern: "/gauge-life-prediction.*" },
   {
     title: "Transactions",
     icon: Package,
@@ -90,32 +94,33 @@ export function AppSidebar() {
   const location = useLocation()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const matchesPath = useCallback(
+    (path?: string, matchPattern?: string) => {
+      if (!path && !matchPattern) return false
+      const currentPath = location.pathname
+
+      if (matchPattern) {
+        return new RegExp(matchPattern).test(currentPath)
+      }
+
+      if (path === "/") {
+        return currentPath === "/"
+      }
+
+      return currentPath === path || currentPath.startsWith(`${path}/`)
+    },
+    [location.pathname]
+  )
+
   const isMainMenuActive = (item: typeof menuItems[0]) => {
     if (item.href) {
-      return location.pathname === item.href || location.pathname.startsWith(item.href + '/')
+      return matchesPath(item.href, item.matchPattern)
     }
     if (item.items) {
-      return item.items.some((sub) => {
-        if (sub.matchPattern) {
-          return new RegExp(sub.matchPattern).test(location.pathname)
-        }
-        return location.pathname === sub.href || location.pathname.startsWith(sub.href + '/')
-      })
+      return item.items.some((sub) => matchesPath(sub.href, sub.matchPattern))
     }
     return false
   }
-  const isActive = useCallback(
-    (path: string, matchPattern?: string) => {
-      const currentPath = location.pathname;
-
-      if (matchPattern) {
-        return new RegExp(matchPattern).test(currentPath);
-      }
-
-      return currentPath.includes(path);
-    },
-    [location.pathname]
-  );
 
   return (
     <Sidebar className="border-r bg-background/80 backdrop-blur-xl">
@@ -136,18 +141,13 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {menuItems.map((item) => {
-                const isActiveMenu = item.href ? isActive(item.href, item.matchPattern) : false;
+                const isActiveMenu = item.href ? matchesPath(item.href, item.matchPattern) : false
 
                 return item.items ? (
                   <Collapsible
                     key={item.title}
                     asChild
-                    defaultOpen={item.items?.some((sub) => {
-                      if (sub.matchPattern) {
-                        return new RegExp(sub.matchPattern).test(location.pathname)
-                      }
-                      return location.pathname === sub.href || location.pathname.startsWith(sub.href + '/')
-                    })}
+                    defaultOpen={item.items?.some((sub) => matchesPath(sub.href, sub.matchPattern))}
                     className="group/collapsible"
                   >
                     <SidebarMenuItem>
@@ -170,9 +170,7 @@ export function AppSidebar() {
                       <CollapsibleContent>
                         <SidebarMenuSub className="mt-1 ml-4 space-y-1 border-l border-primary/30 pl-3">
                           {item.items.map((subItem) => {
-                            const isSubActive = subItem.matchPattern
-                              ? new RegExp(subItem.matchPattern).test(location.pathname)
-                              : location.pathname === subItem.href || location.pathname.startsWith(subItem.href + '/')
+                            const isSubActive = matchesPath(subItem.href, subItem.matchPattern)
 
                             return (
                               <SidebarMenuSubItem key={subItem.title}>
@@ -203,10 +201,10 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       tooltip={item.title}
-                      isActive={location.pathname === item.href || isActiveMenu}
+                      isActive={matchesPath(item.href, item.matchPattern) || isActiveMenu}
                       className={cn(
                         "rounded-xl px-3 py-2.5 transition-all duration-300 hover:bg-primary/10",
-                        location.pathname === item.href &&
+                        matchesPath(item.href, item.matchPattern) &&
                         "bg-primary text-primary-foreground shadow-md hover:bg-primary"
                       )}
                     >

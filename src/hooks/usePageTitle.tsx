@@ -10,7 +10,9 @@ const routeTitles: Record<string, string> = {
   "/reports/calibration-due-report": "Calibration Due Report | Calibration Portal",
   "/history": "History | Calibration Portal",
   "/calibration-certificates": "Calibration Certificates | Calibration Portal",
-  "/analytics": "Analytics | Calibration Portal",
+  "/analytics": "Calibration Overview | Calibration Portal",
+  "/monthly-planning": "Monthly Planning | Calibration Portal",
+  "/gauge-life-prediction": "Gauge Life Prediction | Calibration Portal",
   "/settings": "Settings | Calibration Portal",
 }
 

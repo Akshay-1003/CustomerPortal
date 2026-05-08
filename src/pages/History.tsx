@@ -50,6 +50,7 @@ export function History() {
 
   const { data: gauges, isLoading: isLoadingGauges } = useGauges()
   const { data: history, isLoading: isLoadingHistory, isError, error, refetch } = useGaugeHistory(selectedGaugeId)
+  const gaugeItems = gauges?.data || []
 
   // Pagination
   const totalPages = history ? Math.ceil(history.length / ITEMS_PER_PAGE) : 0
@@ -111,7 +112,7 @@ export function History() {
               <SelectValue placeholder="Select a gauge to view history" />
             </SelectTrigger>
             <SelectContent>
-              {gauges?.map((gauge) => (
+              {gaugeItems.map((gauge) => (
                 <SelectItem key={gauge.id} value={gauge.id}>
                   {gauge.id} - {gauge.master_gauge}
                 </SelectItem>
@@ -164,7 +165,9 @@ export function History() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading History</AlertTitle>
           <AlertDescription className="mt-2">
-            {(error as any)?.response?.data?.message || (error as Error)?.message || 'Failed to load history data. Please try again.'}
+            {(error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+              (error as Error)?.message ||
+              'Failed to load history data. Please try again.'}
           </AlertDescription>
           <Button 
             variant="outline" 

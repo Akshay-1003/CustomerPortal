@@ -1,8 +1,6 @@
-import { Link, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { useGaugeDetail, useGaugeHistory } from "@/hooks/useGauges"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CalibrationHistoryReport } from "@/components/reports/CalibrationHistoryReport"
 

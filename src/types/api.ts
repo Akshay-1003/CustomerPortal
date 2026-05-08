@@ -67,6 +67,7 @@ export interface Gauge {
 
   make: string
   manf_serial_number: string
+  least_count?: string
   unit: string
 
   calibration_location_type: string

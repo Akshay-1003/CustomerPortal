@@ -26,8 +26,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
 } from 'recharts'
 import {
   Calendar,
@@ -60,25 +58,26 @@ export function Analytics() {
   const [showMonthDetail, setShowMonthDetail] = useState(false)
 
   const { data: gauges, isLoading, isError, error } = useGauges()
+  const gaugeItems = gauges?.data || []
 
   // ============================================
   // MEMOIZED CALCULATIONS
   // ============================================
 
   const monthlyData = useMemo(() => {
-    if (!gauges) return []
-    return aggregateGaugesByMonth(gauges, selectedYear)
-  }, [gauges, selectedYear])
+    if (gaugeItems.length === 0) return []
+    return aggregateGaugesByMonth(gaugeItems, selectedYear)
+  }, [gaugeItems, selectedYear])
 
   const summary = useMemo(() => {
-    if (!gauges) return null
-    return calculateCalibrationSummary(gauges)
-  }, [gauges])
+    if (gaugeItems.length === 0) return null
+    return calculateCalibrationSummary(gaugeItems)
+  }, [gaugeItems])
 
   const overdueAnalysis = useMemo(() => {
-    if (!gauges) return null
-    return analyzeOverdueGauges(gauges, selectedYear)
-  }, [gauges, selectedYear])
+    if (gaugeItems.length === 0) return null
+    return analyzeOverdueGauges(gaugeItems, selectedYear)
+  }, [gaugeItems, selectedYear])
 
   // Chart data for visualizations
   const chartData = useMemo(() => {
@@ -164,14 +163,16 @@ export function Analytics() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Analytics</AlertTitle>
           <AlertDescription className="mt-2">
-            {(error as any)?.response?.data?.message || (error as Error)?.message || 'Failed to load analytics data.'}
+            {(error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+              (error as Error)?.message ||
+              'Failed to load analytics data.'}
           </AlertDescription>
         </Alert>
       </div>
     )
   }
 
-  if (!gauges || gauges.length === 0) {
+  if (gaugeItems.length === 0) {
     return (
       <div className="space-y-6 w-full">
         <div>
