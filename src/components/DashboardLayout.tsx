@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { useOrganizationById } from "@/hooks/useOrganizations"
 import { authService } from "@/services/auth.service"
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
 
 
 export function DashboardLayout() {
@@ -27,6 +28,9 @@ export function DashboardLayout() {
 
             </Badge>
            
+          </div>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <PwaInstallPrompt />
           </div>
         </header>
         <div className="flex flex-1 w-full min-w-0 max-w-full flex-col gap-4 overflow-x-hidden p-3 sm:p-4 md:p-6">

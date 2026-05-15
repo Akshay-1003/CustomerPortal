@@ -30,7 +30,7 @@ type ReportPage = {
 
 type CalibrationHistoryReportProps = {
   gauge?: Gauge
-  history?: GaugeHistory[]
+  history?: unknown
 }
 
 type LabelValue = {
@@ -59,7 +59,7 @@ const COMPANY = {
   contact: "Tel: +1-555-0123 | Email: calibration@company.com",
 }
 
-function readSpec(specifications: Record<string, any> | undefined, keys: string[], fallback = "N/A"): string {
+function readSpec(specifications: Record<string, unknown> | undefined, keys: string[], fallback = "N/A"): string {
   if (!specifications) return fallback
   for (const key of keys) {
     const value = specifications[key]
@@ -70,7 +70,12 @@ function readSpec(specifications: Record<string, any> | undefined, keys: string[
       continue
     }
     if (typeof value === "object") {
-      const nestedValue = value.value || value.label || value.text
+      const nestedRecord = value as {
+        value?: string | number | boolean | null
+        label?: string | number | boolean | null
+        text?: string | number | boolean | null
+      }
+      const nestedValue = nestedRecord.value || nestedRecord.label || nestedRecord.text
       if (nestedValue !== undefined && nestedValue !== null && String(nestedValue).trim()) {
         return String(nestedValue).trim()
       }
@@ -86,15 +91,52 @@ function formatDate(value?: string): string {
   return date.toLocaleDateString("en-GB")
 }
 
-function toCalibrationRows(history: GaugeHistory[] = []): CalibrationRow[] {
-  return history.map((record, index) => {
+function toHistoryArray(history: unknown): GaugeHistory[] {
+  if (Array.isArray(history)) {
+    return history
+  }
+
+  if (!history || typeof history !== "object") {
+    return []
+  }
+
+  const payload = history as {
+    data?: unknown
+    items?: unknown
+    results?: unknown
+    history?: unknown
+  }
+
+  const candidateCollections = [payload.data, payload.items, payload.results, payload.history]
+
+  for (const collection of candidateCollections) {
+    if (Array.isArray(collection)) {
+      return collection as GaugeHistory[]
+    }
+  }
+
+  return []
+}
+
+function formatStatusLabel(value?: string): string {
+  if (!value) return "N/A"
+
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ")
+}
+
+function toCalibrationRows(history: unknown): CalibrationRow[] {
+  return toHistoryArray(history).map((record, index) => {
     const raw = record as GaugeHistory & { certificate_number?: string; certificate_url?: string }
     return {
       certificateNo: raw.certificate_number || record.inward_gauge_lab_id || record.certificate || `CERT-${index + 1}`,
       certificateUrl: raw.certificate_url,
       calibrationDate: formatDate(record.certificate_issue_date || record.date),
       observations: record.notes || record.result || "N/A",
-      gauge_condition: record.gauge_condition || (record.gauge_condition === "calibration_completed" ? "Completed" : record.gauge_condition || "N/A"),
+      gauge_condition: record.gauge_condition || formatStatusLabel(record.status),
       calibratedBy: record.performed_by || "N/A",
       dueDate: formatDate(record.next_calibration_date),
       maintenanceDetails:
@@ -183,7 +225,10 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
   const rows = useMemo(() => toCalibrationRows(history), [history])
   const pages = useMemo(() => paginateRows(rows), [rows])
 
-  const specifications = (gauge?.specifications || {}) as Record<string, unknown>
+  const specifications = useMemo(
+    () => (gauge?.specifications || {}) as Record<string, unknown>,
+    [gauge?.specifications]
+  )
   const unit = gauge?.unit || "mm"
   const specificationSize = formatSpecificationForPrint(specifications, unit) || "N/A"
   const acceptanceCriteria = formatSpecificationByKeys(
@@ -359,7 +404,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
   return (
     <>
       <div className="chr-actions chr-no-print">
-        <Button variant="ghost" size="icon" asChild>
+        <Button variant="ghost" size="sm" asChild>
           <Link to="/reports/history-card">
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -394,21 +439,30 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
           .chr-actions {
             display: flex;
-            justify-content: flex-end;
-            margin: 8px 0 12px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 0 10px;
+          }
+
+          .chr-actions a,
+          .chr-actions button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
           }
 
           .chr-preview-pages {
             width: 100%;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 0;
             box-sizing: border-box;
           }
 
           .chr-slide + .chr-slide {
-            margin-top: 12px;
+            margin-top: 10px;
           }
 
           .chr-report-page {
@@ -416,14 +470,15 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             background: #fff;
             color: #111827;
             overflow: hidden;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
+            border: 1px solid #dbe3ec;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
           }
 
           .chr-page-content {
             min-height: ${A4_HEIGHT_PX}px;
             box-sizing: border-box;
-            padding: ${PAGE_MARGIN_PX}px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
             font-family: Arial, sans-serif;
@@ -441,7 +496,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             gap: 12px;
             border-bottom: 1px solid #d7dbe1;
             padding-bottom: 5px;
-            margin-bottom: 7px;
+            margin-bottom: 6px;
           }
 
           .chr-company-head h2 {
@@ -463,7 +518,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           }
 
           .chr-section {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-size:12px;
           }
 
@@ -494,7 +549,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           .chr-top-grid {
             display: grid;
             grid-template-columns: 58% 42%;
-            gap: 10px;
+            gap: 8px;
             align-items: stretch;
           }
 
@@ -510,7 +565,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           .chr-info-row {
             display: grid;
             grid-template-columns: 42% 58%;
-            min-height: 28px;
+            min-height: 26px;
           }
 
           .chr-info-row + .chr-info-row {
@@ -519,7 +574,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
           .chr-info-label,
           .chr-info-value {
-            padding: 4px 7px;
+            padding: 4px 6px;
             font-size: 11px;
             line-height: 1.3;
             display: flex;
@@ -533,7 +588,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           }
 
           .chr-acceptance-wrap {
-            margin-top: 6px;
+            margin-top: 4px;
           }
 
           .chr-acceptance-table,
@@ -548,7 +603,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           .chr-table th,
           .chr-table td {
             border: 1px solid #d8dde3;
-            padding: 4px 6px;
+            padding: 4px 5px;
             text-align: left;
             vertical-align: top;
             font-size: 11px;
@@ -633,10 +688,10 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           }
 
           .chr-footer {
-            margin-top: 8px;
+            margin-top: 6px;
             min-height: ${FOOTER_HEIGHT_PX}px;
             border-top: 1px solid #d1d5db;
-            padding-top: 6px;
+            padding-top: 5px;
             display: flex;
             justify-content: space-between;
             gap: 10px;

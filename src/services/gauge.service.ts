@@ -1,6 +1,35 @@
 import { apiService } from './api.service'
 import { type Gauge, type GaugeHistory } from '@/types/api'
 
+type GaugeHistoryResponse =
+  | GaugeHistory[]
+  | {
+      data?: GaugeHistory[] | null
+      items?: GaugeHistory[] | null
+      results?: GaugeHistory[] | null
+      history?: GaugeHistory[] | null
+    }
+
+function normalizeGaugeHistoryResponse(payload: GaugeHistoryResponse | null | undefined): GaugeHistory[] {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return []
+  }
+
+  const candidateCollections = [payload.data, payload.items, payload.results, payload.history]
+
+  for (const collection of candidateCollections) {
+    if (Array.isArray(collection)) {
+      return collection
+    }
+  }
+
+  return []
+}
+
 export const gaugeService = {
   async getGaugesByOrganization(organizationId: string, page: number = 1, limit: number = 10, search?: string): Promise<{
     data: Gauge[],
@@ -35,8 +64,9 @@ export const gaugeService = {
     if (!gaugeId) {
       throw new Error('Gauge ID is required')
     }
-    
-    return await apiService.get<GaugeHistory[]>(`/gauge/${gaugeId}/history`)
+
+    const response = await apiService.get<GaugeHistoryResponse>(`/gauge/${gaugeId}/history`)
+    return normalizeGaugeHistoryResponse(response)
   },
 
   async getGaugeById(gaugeId: string): Promise<Gauge> {
@@ -57,4 +87,3 @@ export const gaugeService = {
     return await apiService.put<Gauge>(`/gauge/${gaugeId}`, { status })
   },
 }
-

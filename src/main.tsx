@@ -8,6 +8,9 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './lib/queryClient'
 import { AuthProvider } from './contexts/AuthContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { registerPwaServiceWorker } from './lib/registerPwaServiceWorker'
+
+registerPwaServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
