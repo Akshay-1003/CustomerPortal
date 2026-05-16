@@ -1,9 +1,16 @@
 import { registerSW } from "virtual:pwa-register"
+import { canUsePwaFeatures, cleanupPwaOnUnsupportedOrigin } from "@/lib/pwaSupport"
 
 let isRegistered = false
 
 export function registerPwaServiceWorker() {
   if (isRegistered || import.meta.env.DEV || typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    return
+  }
+
+  if (!canUsePwaFeatures()) {
+    void cleanupPwaOnUnsupportedOrigin()
+    console.info("Skipping PWA service worker registration on an insecure public origin.")
     return
   }
 

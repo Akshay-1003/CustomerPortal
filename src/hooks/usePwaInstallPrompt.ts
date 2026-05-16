@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { canUsePwaFeatures } from "@/lib/pwaSupport"
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>
@@ -16,13 +17,14 @@ function isStandaloneMode() {
 }
 
 export function usePwaInstallPrompt() {
+  const isSupportedOrigin = canUsePwaFeatures()
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(() => (
     typeof window !== "undefined" ? isStandaloneMode() : false
   ))
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !isSupportedOrigin) {
       return
     }
 
@@ -52,7 +54,7 @@ export function usePwaInstallPrompt() {
       window.removeEventListener("appinstalled", handleAppInstalled)
       displayModeQuery.removeEventListener("change", handleDisplayModeChange)
     }
-  }, [])
+  }, [isSupportedOrigin])
 
   const promptInstall = useCallback(async () => {
     if (!deferredPrompt) {
@@ -66,7 +68,7 @@ export function usePwaInstallPrompt() {
   }, [deferredPrompt])
 
   return {
-    canInstall: Boolean(deferredPrompt) && !isInstalled,
+    canInstall: isSupportedOrigin && Boolean(deferredPrompt) && !isInstalled,
     isInstalled,
     promptInstall,
   }
