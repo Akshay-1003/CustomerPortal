@@ -3,6 +3,14 @@ import type { LoginRequest, LoginResponse, Organization, User } from '@/types/ap
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 
+type OrganizationListResponse =
+  | Organization[]
+  | {
+      organizations: Organization[]
+      total_count?: number
+      page?: number
+    }
+
 /* ----------------------------- */
 /* Token Types                   */
 /* ----------------------------- */
@@ -119,14 +127,46 @@ export const authService = {
 
   async getOrganizations(): Promise<Organization[]> {
     try {
-      const response = await apiService.get<
-        Organization[] | { organizations: Organization[] }
-      >('/organizations')
+      let page = 0
+      let totalCount = Number.POSITIVE_INFINITY
+      const organizations: Organization[] = []
+      const seenIds = new Set<string>()
 
-      if (Array.isArray(response)) return response
-      if (response && 'organizations' in response) return response.organizations
+      while (organizations.length < totalCount) {
+        const response = await apiService.get<OrganizationListResponse>('/organizations', {
+          params: { page },
+        })
 
-      return []
+        if (Array.isArray(response)) {
+          return response
+        }
+
+        const pageItems = Array.isArray(response?.organizations) ? response.organizations : []
+
+        if (pageItems.length === 0) {
+          break
+        }
+
+        let addedCount = 0
+        pageItems.forEach((organization) => {
+          if (organization?.id && !seenIds.has(organization.id)) {
+            seenIds.add(organization.id)
+            organizations.push(organization)
+            addedCount += 1
+          }
+        })
+
+        totalCount =
+          typeof response.total_count === 'number' ? response.total_count : organizations.length
+
+        if (addedCount === 0) {
+          break
+        }
+
+        page += 1
+      }
+
+      return organizations
     } catch (error) {
       console.error('Failed to fetch organizations:', error)
       throw error

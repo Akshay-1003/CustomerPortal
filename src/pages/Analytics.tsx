@@ -37,7 +37,7 @@ import {
   AlertCircle,
   ChevronRight,
 } from 'lucide-react'
-import { useGauges } from '@/hooks/useGauges'
+import { useAllGauges } from '@/hooks/useGauges'
 import {
   aggregateGaugesByMonth,
   calculateCalibrationSummary,
@@ -57,8 +57,7 @@ export function Analytics() {
   const [selectedMonth, setSelectedMonth] = useState<MonthlyStats | null>(null)
   const [showMonthDetail, setShowMonthDetail] = useState(false)
 
-  const { data: gauges, isLoading, isError, error } = useGauges()
-  const gaugeItems = gauges?.data || []
+  const { data: gaugeItems = [], isLoading, isError, error } = useAllGauges()
 
   // ============================================
   // MEMOIZED CALCULATIONS
@@ -130,9 +129,9 @@ export function Analytics() {
     return (
       <div className="space-y-6 w-full">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Analytics</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
           <p className="text-muted-foreground">
-            Month-wise calibration planning and due tracking
+            Operational calibration status, due tracking, and overdue visibility.
           </p>
         </div>
         <Card className="p-12">
@@ -154,9 +153,9 @@ export function Analytics() {
     return (
       <div className="space-y-6 w-full">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Analytics</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
           <p className="text-muted-foreground">
-            Month-wise calibration planning and due tracking
+            Operational calibration status, due tracking, and overdue visibility.
           </p>
         </div>
         <Alert variant="destructive">
@@ -176,9 +175,9 @@ export function Analytics() {
     return (
       <div className="space-y-6 w-full">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Analytics</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
           <p className="text-muted-foreground">
-            Month-wise calibration planning and due tracking
+            Operational calibration status, due tracking, and overdue visibility.
           </p>
         </div>
         <Card className="p-12">
@@ -205,9 +204,9 @@ export function Analytics() {
       {/* Header with Year Selector */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Analytics</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
           <p className="text-muted-foreground">
-            Month-wise calibration planning and due tracking
+            Operational calibration status, due tracking, and overdue visibility.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -306,7 +305,7 @@ export function Analytics() {
         <CardHeader>
           <CardTitle>Month-wise Calibration Status ({selectedYear})</CardTitle>
           <CardDescription>
-            Visual breakdown of completed, pending, and overdue calibrations by month
+            Operational breakdown of completed, pending, and overdue calibrations by month.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -330,9 +329,9 @@ export function Analytics() {
       {/* Month-wise Summary Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Calibration Schedule ({selectedYear})</CardTitle>
+          <CardTitle>Operational Monthly Summary ({selectedYear})</CardTitle>
           <CardDescription>
-            Click on a month to view detailed gauge list
+            Click on a month to inspect detailed due and status-level gauge information.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -392,7 +391,7 @@ export function Analytics() {
       {overdueAnalysis && overdueAnalysis.totalOverdue > 0 && (
         <Card className="border-red-200">
           <CardHeader>
-            <CardTitle className="text-red-600">Overdue Analysis</CardTitle>
+            <CardTitle className="text-red-600">Overdue Attention</CardTitle>
             <CardDescription>
               Detailed breakdown of overdue calibrations requiring immediate action
             </CardDescription>

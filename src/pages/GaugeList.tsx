@@ -8,6 +8,7 @@ import { useGauges } from "@/hooks/useGauges"
 import { GaugeListTable } from "@/components/tables/GaugeListTable"
 import { useDebouncedValue } from "@/hooks/useDebounce"
 import { useRef } from "react"
+import { authService } from "@/services/auth.service"
 
 const ITEMS_PER_PAGE = 10
 
@@ -18,6 +19,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export default function GaugeListPage() {
   const navigate = useNavigate()
+  const organizationId = authService.getOrganizationId()
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE)
   const [searchQuery, setSearchQuery] = useState("")
@@ -110,9 +112,17 @@ export default function GaugeListPage() {
             <Printer className="mr-2 h-4 w-4" />
             Print List
           </Button>
-          <Button onClick={() => navigate("/gauge-list/create")}>
+          <Button
+            onClick={() =>
+              navigate(
+                organizationId
+                  ? `/gauge-list/create?organizationId=${encodeURIComponent(organizationId)}`
+                  : "/gauge-list/create"
+              )
+            }
+          >
             <Plus className="mr-2 h-4 w-4" />
-            Create Gauge Master
+            Add Existing Gauge
           </Button>
         </div>
       </div>

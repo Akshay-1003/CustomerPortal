@@ -38,7 +38,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/contexts/AuthContext"
+import { useAuth } from "@/hooks/useAuth"
 import { useCallback } from "react"
 
 interface MenuItem {
@@ -67,8 +67,7 @@ const menuItems: MenuItem[] = [
     title: "Gauge Management",
     icon: Gauge,
     items: [
-      { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list" },
-      { title: "Gauge Master", icon: FileText, href: "/gauge-list/create", matchPattern: "/gauge-list/create.*" },
+      { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list.*" },
       { title: "Format Numbers", icon: FileText, href: "/gauge-management/format-numbers", matchPattern: "/gauge-management/format-numbers.*" },
       // {
       //   title: "Calibration Certificates",

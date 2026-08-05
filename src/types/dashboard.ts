@@ -53,6 +53,7 @@ export interface MonthlyCalibrationTotals extends MonthlyCalibrationPercentages 
   monthsWithPlan: number
   highestPlannedMonth: HighestPlannedMonth | null
   hasBacklogCompletion: boolean
+  hasOverdueEqualToPlan: boolean
   hasDistributionData: boolean
 }
 

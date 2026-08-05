@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { AxiosError } from "axios"
-import { Activity, AlertCircle, CalendarDays, RefreshCw, ShieldCheck, Users } from "lucide-react"
+import { Activity, AlertCircle, CalendarDays, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,10 +19,6 @@ import { CalibrationMonthTable } from "./CalibrationMonthTable"
 import { DailyCalibrationAnalysisSection } from "./DailyCalibrationAnalysisSection"
 import { MonthlyPlannedChart } from "./MonthlyPlannedChart"
 import { MonthlyStatusGroupedChart } from "./MonthlyStatusGroupedChart"
-import { OverdueTrendChart } from "./OverdueTrendChart"
-import { PlannedDistributionTrendChart } from "./PlannedDistributionTrendChart"
-import { PlanVsCompletedTrendChart } from "./PlanVsCompletedTrendChart"
-import { StatusDistributionChart } from "./StatusDistributionChart"
 
 function getErrorMessage(error: unknown) {
   if (error instanceof AxiosError) {
@@ -80,10 +76,8 @@ export function MonthlyCalibrationDashboard() {
   const [selectedDailyMonth, setSelectedDailyMonth] = useState(currentMonth)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
-  const { data, isLoading, isFetching, isError, error, refetch } = useMonthlyCalibrationDashboard(
-    selectedYear,
-    plannedOnly
-  )
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useMonthlyCalibrationDashboard(selectedYear)
 
   const yearOptions = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => currentYear - 3 + index)
@@ -111,36 +105,15 @@ export function MonthlyCalibrationDashboard() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                  Monthly calibration planning and execution intelligence
+                  Monthly Calibration Overview
                 </h1>
                 <Badge variant={plannedOnly ? "primary" : "outline"}>
                   {plannedOnly ? "Plan View" : "Status View"}
                 </Badge>
               </div>
               <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-                Built for Vendor, Customer, Quality Head, and Gauges Head teams to monitor planned load,
-                completed work, pending backlog, and overdue exposure in one clean enterprise view.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-border/70 bg-background/80 px-4 py-3 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                Planning discipline
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Track where calibration demand is concentrated before capacity becomes a risk.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-background/80 px-4 py-3 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Users className="h-4 w-4 text-blue-600" />
-                Shared management view
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Keep operations, quality, and customer stakeholders aligned on the same monthly picture.
+                Review yearly planned and executed calibration counts, then switch months below for the
+                daily breakdown.
               </p>
             </div>
           </div>
@@ -196,23 +169,9 @@ export function MonthlyCalibrationDashboard() {
           <CalibrationKpiCards plannedOnly={plannedOnly} totals={totals} />
 
           {plannedOnly ? (
-            <>
-              <MonthlyPlannedChart data={monthlyData} />
-              <PlannedDistributionTrendChart data={monthlyData} />
-            </>
+            <MonthlyPlannedChart data={monthlyData} />
           ) : (
-            <>
-              <MonthlyStatusGroupedChart data={monthlyData} />
-              <div className="grid gap-6 xl:grid-cols-2">
-                <PlanVsCompletedTrendChart data={monthlyData} />
-                <OverdueTrendChart data={monthlyData} />
-                {totals.hasDistributionData && (
-                  <div className="xl:col-span-2">
-                    <StatusDistributionChart totals={totals} />
-                  </div>
-                )}
-              </div>
-            </>
+            <MonthlyStatusGroupedChart data={monthlyData} />
           )}
 
           <CalibrationMonthTable
@@ -226,8 +185,6 @@ export function MonthlyCalibrationDashboard() {
       <DailyCalibrationAnalysisSection
         selectedYear={selectedYear}
         selectedMonth={selectedDailyMonth}
-        yearOptions={yearOptions}
-        onYearChange={setSelectedYear}
         onMonthChange={setSelectedDailyMonth}
       />
 

@@ -23,9 +23,9 @@ export function MonthlyPlannedChart({ data }: MonthlyPlannedChartProps) {
   return (
     <Card className="border-border/70 shadow-sm">
       <CardHeader>
-        <CardTitle>Monthly Planned Bar Chart</CardTitle>
+        <CardTitle>Monthly Calibration Overview</CardTitle>
         <CardDescription>
-          Planning load by month for the selected calibration year.
+          Planned calibration load by month for the selected year.
         </CardDescription>
       </CardHeader>
       <CardContent>

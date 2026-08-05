@@ -9,10 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  formatDashboardNumber,
-  formatDashboardPercentage,
-} from "@/lib/monthlyCalibrationDashboard"
+import { formatDashboardNumber } from "@/lib/monthlyCalibrationDashboard"
 import type { NormalizedMonthlyCalibrationDatum } from "@/types/dashboard"
 
 interface CalibrationMonthTableProps {
@@ -29,17 +26,17 @@ export function CalibrationMonthTable({
   return (
     <Card className="border-border/70 shadow-sm">
       <CardHeader>
-        <CardTitle>{plannedOnly ? "Month Planning Table" : "Month-wise Calibration Status"}</CardTitle>
+        <CardTitle>Monthly Calibration Overview</CardTitle>
         <CardDescription>
           {plannedOnly
-            ? "Month-level plan coverage with annual contribution share."
-            : "Operational month-wise status with completion and overdue ratios."}
+            ? "Month-level planned calibration load for the selected year."
+            : "Month-level planned and executed calibration counts for the selected year."}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-hidden rounded-lg border border-border/70">
           <div className="max-h-[460px] overflow-auto">
-            <Table className={plannedOnly ? "min-w-[720px]" : "min-w-[1080px]"}>
+            <Table className={plannedOnly ? "min-w-[620px]" : "min-w-[920px]"}>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableHead className="sticky top-0 z-10 bg-background/95 backdrop-blur">Month</TableHead>
@@ -50,14 +47,6 @@ export function CalibrationMonthTable({
                       <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Pending</TableHead>
                       <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Overdue</TableHead>
                     </>
-                  )}
-                  <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">
-                    {plannedOnly ? "Share of Annual Plan %" : "Completion %"}
-                  </TableHead>
-                  {!plannedOnly && (
-                    <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">
-                      Overdue %
-                    </TableHead>
                   )}
                   <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Action</TableHead>
                 </TableRow>
@@ -79,16 +68,6 @@ export function CalibrationMonthTable({
                           {formatDashboardNumber(month.overdue)}
                         </TableCell>
                       </>
-                    )}
-                    <TableCell className="text-right">
-                      {formatDashboardPercentage(
-                        plannedOnly ? month.shareOfAnnualPlan : month.completionPercentage
-                      )}
-                    </TableCell>
-                    {!plannedOnly && (
-                      <TableCell className="text-right text-red-700">
-                        {formatDashboardPercentage(month.overduePercentage)}
-                      </TableCell>
                     )}
                     <TableCell className="text-right">
                       <Button

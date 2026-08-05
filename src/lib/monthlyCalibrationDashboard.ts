@@ -143,6 +143,7 @@ export function calculateTotals(
     monthsWithPlan,
     highestPlannedMonth,
     hasBacklogCompletion: completed > planned,
+    hasOverdueEqualToPlan: planned > 0 && overdue === planned,
     hasDistributionData: completed > 0 || pending > 0 || overdue > 0,
     ...calculatePercentages(planned, completed, overdue),
   }

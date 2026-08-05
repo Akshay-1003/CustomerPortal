@@ -1,6 +1,7 @@
 import axios, { AxiosError, type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { env } from '@/config/env'
 import Cookies from 'js-cookie'
+import { redirectToAppPath } from '@/lib/appNavigation'
 
 class ApiService {
   private api: AxiosInstance
@@ -33,7 +34,9 @@ class ApiService {
           // Clear auth and redirect to login
           Cookies.remove('auth_token')
           Cookies.remove('user')
-          window.location.href = '/login'
+          Cookies.remove('auth')
+          Cookies.remove('organization_id')
+          redirectToAppPath('/login')
         }
         return Promise.reject(error)
       }
@@ -45,12 +48,12 @@ class ApiService {
     return response.data
   }
 
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.api.post<T>(url, data, config)
     return response.data
   }
 
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.api.put<T>(url, data, config)
     return response.data
   }
@@ -74,4 +77,3 @@ class ApiService {
 }
 
 export const apiService = new ApiService()
-

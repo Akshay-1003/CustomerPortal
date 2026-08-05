@@ -5,16 +5,12 @@ import type {
 } from "@/types/dashboard"
 
 export const dashboardService = {
-  async getMonthlyCalibration(params: {
-    year: number
-    plannedOnly: boolean
-  }): Promise<MonthlyCalibrationApiResponse> {
+  async getMonthlyCalibration(params: { year: number }): Promise<MonthlyCalibrationApiResponse> {
     return apiService.get<MonthlyCalibrationApiResponse>(
       "/dashboard/gauges/monthly-calibration",
       {
         params: {
           year: params.year,
-          planned_only: params.plannedOnly,
         },
       }
     )

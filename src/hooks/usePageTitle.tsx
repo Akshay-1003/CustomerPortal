@@ -4,7 +4,7 @@ import { useLocation, useParams } from "react-router-dom"
 const routeTitles: Record<string, string> = {
   "/": "Dashboard | Calibration Portal",
   "/gauge-list": "Gauge List | Calibration Portal",
-  "/gauge-list/create": "Gauge Master | Calibration Portal",
+  "/gauge-list/create": "Add Existing Gauge | Calibration Portal",
   "/gauge-management/format-numbers": "Format Numbers | Calibration Portal",
   "/reports/history-card": "History Card | Calibration Portal",
   "/reports/calibration-due-report": "Calibration Due Report | Calibration Portal",

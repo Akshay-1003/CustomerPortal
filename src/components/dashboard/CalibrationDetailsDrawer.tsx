@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { formatDashboardNumber, formatDashboardPercentage } from "@/lib/monthlyCalibrationDashboard"
+import { formatDashboardNumber } from "@/lib/monthlyCalibrationDashboard"
 import type { NormalizedMonthlyCalibrationDatum } from "@/types/dashboard"
 
 interface CalibrationDetailsDrawerProps {
@@ -59,9 +59,9 @@ export function CalibrationDetailsDrawer({
               {plannedOnly ? (
                 <Card className="border-border/70">
                   <CardContent className="p-4">
-                    <div className="text-sm text-muted-foreground">Share of Annual Plan</div>
+                    <div className="text-sm text-muted-foreground">Month</div>
                     <div className="mt-2 text-2xl font-semibold">
-                      {formatDashboardPercentage(month.shareOfAnnualPlan)}
+                      {month.monthLabel}
                     </div>
                   </CardContent>
                 </Card>
@@ -94,27 +94,6 @@ export function CalibrationDetailsDrawer({
                 </>
               )}
             </div>
-
-            {!plannedOnly && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Card className="border-border/70">
-                  <CardContent className="p-4">
-                    <div className="text-sm text-muted-foreground">Completion %</div>
-                    <div className="mt-2 text-2xl font-semibold">
-                      {formatDashboardPercentage(month.completionPercentage)}
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/70">
-                  <CardContent className="p-4">
-                    <div className="text-sm text-muted-foreground">Overdue %</div>
-                    <div className="mt-2 text-2xl font-semibold text-red-700">
-                      {formatDashboardPercentage(month.overduePercentage)}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
 
             <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
               <div className="flex items-start gap-3">

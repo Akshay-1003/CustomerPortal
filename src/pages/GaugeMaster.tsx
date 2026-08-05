@@ -1,66 +1,73 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
-import { useQuery } from "@tanstack/react-query"
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Info, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import type { CertificateType, GaugeMasterOption } from "@/types/api"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { authService } from "@/services/auth.service"
 import { mastersService, type GaugeCreatePayload } from "@/services/masters.service"
+import type { CertificateType, GaugeMasterOption } from "@/types/api"
 
 type GaugeMasterFormValues = {
   master_gauge_id: string
   certificate_type_id: string
-  gauge_class: string
   identification_number: string
   calibration_frequency: string
   calibration_frequency_unit: string
   make: string
   manf_serial_number: string
-  unit: string
-  calibration_location_type: string
-  calibration_done_under: string
-  gauge_condition: string
-  last_calibration_certificate_no: string
-  date_of_certificate: string
+  last_calibration_date: string
+  due_date: string
   calibration_by: string
-  observations: string
-  maintenance_other_details: string
-  keep_record_history_card: boolean
+  external_lab_name: string
+  remarks: string
+  specifications: Record<string, unknown>
 }
 
 const initialValues: GaugeMasterFormValues = {
   master_gauge_id: "",
   certificate_type_id: "",
-  gauge_class: "no_type",
   identification_number: "",
   calibration_frequency: "12",
   calibration_frequency_unit: "months",
   make: "",
   manf_serial_number: "",
-  unit: "mm",
-  calibration_location_type: "permanent_facility",
-  calibration_done_under: "nabl",
-  gauge_condition: "",
-  last_calibration_certificate_no: "",
-  date_of_certificate: "",
+  last_calibration_date: "",
+  due_date: "",
   calibration_by: "",
-  observations: "",
-  maintenance_other_details: "",
-  keep_record_history_card: true,
+  external_lab_name: "",
+  remarks: "",
+  specifications: {},
 }
 
 export function GaugeMasterPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
   const [isSaving, setIsSaving] = useState(false)
+  const [certificateFile, setCertificateFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const form = useForm<GaugeMasterFormValues>({ defaultValues: initialValues })
+  const form = useForm<GaugeMasterFormValues>({
+    defaultValues: initialValues,
+  })
+
   const selectedMasterGaugeId = form.watch("master_gauge_id")
   const selectedCertificateTypeId = form.watch("certificate_type_id")
+  const calibrationBy = form.watch("calibration_by")
+  const organizationId = searchParams.get("organizationId") || authService.getOrganizationId() || ""
 
   const { data: masterGaugeOptions = [], isLoading: mastersLoading } = useQuery({
     queryKey: ["gauge-master-options"],
@@ -72,10 +79,25 @@ export function GaugeMasterPage() {
     queryFn: () => mastersService.getCertificateTypes(),
   })
 
+  const selectedGaugeTypeName = useMemo(() => {
+    if (!selectedCertificateTypeId) return ""
+
+    const fromCertificateType = certificateTypes.find(
+      (item: CertificateType) => item.id === selectedCertificateTypeId
+    )
+    if (fromCertificateType?.name) {
+      return fromCertificateType.name
+    }
+
+    const fromGaugeMaster = masterGaugeOptions.find(
+      (item: GaugeMasterOption) => item.id === selectedMasterGaugeId
+    )
+    return fromGaugeMaster?.gauge_type || ""
+  }, [certificateTypes, masterGaugeOptions, selectedCertificateTypeId, selectedMasterGaugeId])
 
   const onGaugeMasterChange = (masterGaugeId: string) => {
     form.setValue("master_gauge_id", masterGaugeId, { shouldValidate: true })
-    const selected = masterGaugeOptions.find((item) => item.id === masterGaugeId)
+    const selected = masterGaugeOptions.find((item: GaugeMasterOption) => item.id === masterGaugeId)
     if (selected?.certificate_type_id) {
       form.setValue("certificate_type_id", selected.certificate_type_id, { shouldValidate: true })
     }
@@ -83,51 +105,91 @@ export function GaugeMasterPage() {
 
   const resetForm = () => {
     form.reset(initialValues)
+    setCertificateFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const payload: GaugeCreatePayload = {
-      master_gauge_id: values.master_gauge_id,
-      certificate_type_id: values.certificate_type_id,
-      gauge_class: values.gauge_class,
-      identification_number: values.identification_number.trim(),
-      calibration_frequency: Number(values.calibration_frequency || 0),
-      calibration_frequency_unit: values.calibration_frequency_unit,
-      make: values.make.trim(),
-      manf_serial_number: values.manf_serial_number.trim(),
-      unit: values.unit,
-      calibration_location_type: values.calibration_location_type,
-      calibration_location: "",
-      calibration_done_under: values.calibration_done_under,
-      gauge_condition: values.gauge_condition.trim(),
-      specifications: {
-        last_calibration_certificate_no: values.last_calibration_certificate_no.trim(),
-        date_of_certificate: values.date_of_certificate || null,
-        calibration_by: values.calibration_by.trim(),
-        observations: values.observations.trim(),
-        maintenance_other_details: values.maintenance_other_details.trim(),
-        keep_record_history_card: values.keep_record_history_card ? "yes" : "no",
-      },
-    }
-
-    if (!payload.master_gauge_id || !payload.certificate_type_id || !payload.identification_number) {
+    if (!values.master_gauge_id || !values.certificate_type_id || !values.identification_number.trim()) {
       toast.error("Gauge Name, Gauge Type and Identification Number are required")
       return
     }
 
-    if (!payload.calibration_frequency || payload.calibration_frequency < 1) {
+    if (!values.calibration_by.trim()) {
+      toast.error("Calibration By is required")
+      return
+    }
+
+    if (values.calibration_by === "external" && !values.external_lab_name.trim()) {
+      toast.error("External Lab Name is required when Calibration By is External")
+      return
+    }
+
+    if (!values.last_calibration_date || !values.due_date) {
+      toast.error("Last Calibration Date and Due Date are required")
+      return
+    }
+
+    if (!values.calibration_frequency || Number(values.calibration_frequency) < 1) {
       toast.error("Calibration frequency must be a valid number")
       return
     }
 
+    if (!certificateFile) {
+      toast.error("Upload Calibration Certificate is required")
+      return
+    }
+
     setIsSaving(true)
+
     try {
+      const certificateUrl = await mastersService.uploadGaugeCertificate(certificateFile)
+
+      const payload: GaugeCreatePayload = {
+        master_gauge_id: values.master_gauge_id,
+        certificate_type_id: values.certificate_type_id,
+        gauge_class: "no_type",
+        identification_number: values.identification_number.trim(),
+        calibration_frequency: Number(values.calibration_frequency || 0),
+        calibration_frequency_unit: values.calibration_frequency_unit,
+        make: values.make.trim(),
+        manf_serial_number: values.manf_serial_number.trim(),
+        unit: "mm",
+        calibration_location_type: "customer_site",
+        calibration_location: "",
+        calibration_done_under: "non_nabl",
+        gauge_condition: values.remarks.trim(),
+        certificate_issue_date: values.last_calibration_date || null,
+        next_calibration_date: values.due_date || null,
+        certificate_url: certificateUrl,
+        specifications: {
+          // Specification / Size import is intentionally disabled for now.
+          // ...values.specifications,
+          source: "external_import",
+          import_mode: "existing_gauge",
+          date_of_certificate: values.last_calibration_date || null,
+          next_calibration_date: values.due_date || null,
+          calibration_by: values.calibration_by === "external"
+            ? values.external_lab_name.trim() || "External"
+            : "Internal",
+          calibration_by_type: values.calibration_by,
+          external_lab_name: values.external_lab_name.trim(),
+          remarks: values.remarks.trim(),
+          certificate_url: certificateUrl,
+          certificate_file_name: certificateFile.name,
+          gauge_type_name: selectedGaugeTypeName,
+        },
+      }
+
       await mastersService.createGauge(payload)
-      toast.success("Gauge created")
+      await queryClient.invalidateQueries({ queryKey: ["gauges"] })
+      toast.success("Existing gauge added successfully")
       resetForm()
       navigate("/gauge-list")
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to save gauge")
+      toast.error(error?.response?.data?.message || error?.message || "Failed to save gauge")
     } finally {
       setIsSaving(false)
     }
@@ -136,23 +198,37 @@ export function GaugeMasterPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-3xl font-bold">Create Gauge Master</h2>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-bold">Add Existing Gauge</h2>
+          <p className="text-sm text-muted-foreground">
+            Register gauges that were already calibrated externally and attach the latest certificate.
+          </p>
+          {organizationId ? (
+            <p className="text-xs text-muted-foreground">Organization ID: {organizationId}</p>
+          ) : null}
         </div>
       </div>
 
+      <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+        <Info className="h-4 w-4" />
+        <AlertTitle>External Gauge Import Only</AlertTitle>
+        <AlertDescription>
+          Use this page only for migration or gauges calibrated by another laboratory. New gauges that
+          will be calibrated by us should be created from the calibration workflow instead.
+        </AlertDescription>
+      </Alert>
+
       <Card>
-        
         <CardContent className="mt-4">
-          <form onSubmit={onSubmit} className="space-y-5">
+          <form onSubmit={onSubmit} className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Gauge Name *</Label>
                 <Select value={selectedMasterGaugeId || undefined} onValueChange={onGaugeMasterChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={mastersLoading ? "Loading..." : "Select gauge name"} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-72">
                     {masterGaugeOptions.map((option: GaugeMasterOption) => (
                       <SelectItem key={option.id} value={option.id}>
                         {option.name}
@@ -164,9 +240,9 @@ export function GaugeMasterPage() {
 
               <div className="space-y-2">
                 <Label>Gauge Type *</Label>
-                <Select value={selectedCertificateTypeId || undefined} onValueChange={(v) => form.setValue("certificate_type_id", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={certificateLoading ? "Loading..." : "Select gauge type"} />
+                <Select value={selectedCertificateTypeId || undefined} disabled>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={certificateLoading ? "Loading..." : "Auto-selected from gauge name"} />
                   </SelectTrigger>
                   <SelectContent>
                     {certificateTypes.map((option: CertificateType) => (
@@ -179,30 +255,35 @@ export function GaugeMasterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Class</Label>
-                <Select value={form.watch("gauge_class")} onValueChange={(v) => form.setValue("gauge_class", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select class" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no_type">No Type</SelectItem>
-                    <SelectItem value="digital">Digital</SelectItem>
-                    <SelectItem value="vernier">Vernier</SelectItem>
-                    <SelectItem value="dial">Dial</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Identification Number *</Label>
+                <Input
+                  {...form.register("identification_number")}
+                  placeholder="Enter identification number"
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>Identification No. *</Label>
-                <Input {...form.register("identification_number", { required: true })} placeholder="Enter identification number" />
+                <Label>Make</Label>
+                <Input {...form.register("make")} placeholder="Enter make" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Serial Number</Label>
+                <Input {...form.register("manf_serial_number")} placeholder="Enter serial number" />
               </div>
 
               <div className="space-y-2">
                 <Label>Calibration Frequency *</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <Input {...form.register("calibration_frequency", { required: true })} placeholder="12" />
-                  <Select value={form.watch("calibration_frequency_unit")} onValueChange={(v) => form.setValue("calibration_frequency_unit", v)}>
+                  <Input
+                    {...form.register("calibration_frequency")}
+                    inputMode="numeric"
+                    placeholder="12"
+                  />
+                  <Select
+                    value={form.watch("calibration_frequency_unit")}
+                    onValueChange={(value) => form.setValue("calibration_frequency_unit", value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Unit" />
                     </SelectTrigger>
@@ -214,131 +295,83 @@ export function GaugeMasterPage() {
                 </div>
               </div>
 
+              {/*
+              <div className="space-y-2 md:col-span-3">
+                <GaugeSpecificationRenderer gaugeType={selectedGaugeTypeName} />
+              </div>
+              */}
+
               <div className="space-y-2">
-                <Label>Make</Label>
-                <Input {...form.register("make")} placeholder="Enter make" />
+                <Label>Last Calibration Date *</Label>
+                <Input type="date" {...form.register("last_calibration_date")} />
               </div>
 
               <div className="space-y-2">
-                <Label>Manf.SR.No</Label>
-                <Input {...form.register("manf_serial_number")} placeholder="Enter serial number" />
+                <Label>Due Date *</Label>
+                <Input type="date" {...form.register("due_date")} />
               </div>
 
               <div className="space-y-2">
-                <Label>Unit *</Label>
-                <Select value={form.watch("unit")} onValueChange={(v) => form.setValue("unit", v)}>
+                <Label>Calibration By *</Label>
+                <Select
+                  value={calibrationBy || undefined}
+                  onValueChange={(value) => form.setValue("calibration_by", value, { shouldValidate: true })}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select unit" />
+                    <SelectValue placeholder="Select calibration source" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mm">mm</SelectItem>
-                    <SelectItem value="µm">µm</SelectItem>
-                    <SelectItem value="inch">inch</SelectItem>
-                    <SelectItem value="bar">bar</SelectItem>
-                    <SelectItem value="Pa">Pa</SelectItem>
-                    <SelectItem value="degree">degree</SelectItem>
+                    <SelectItem value="internal">Internal</SelectItem>
+                    <SelectItem value="external">External</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Calibration Location</Label>
-                <Select value={form.watch("calibration_location_type")} onValueChange={(v) => form.setValue("calibration_location_type", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="permanent_facility">Permanent Facility</SelectItem>
-                    <SelectItem value="mobile_facility">Mobile Facility</SelectItem>
-                    <SelectItem value="customer_site">Customer Site</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {calibrationBy === "external" ? (
+                <div className="space-y-2">
+                  <Label>External Lab Name</Label>
+                  <Input
+                    {...form.register("external_lab_name")}
+                    placeholder="Enter external lab name"
+                  />
+                </div>
+              ) : (
+                <div />
+              )}
 
-              <div className="space-y-2">
-                <Label>Calibration Done Under</Label>
-                <Select value={form.watch("calibration_done_under")} onValueChange={(v) => form.setValue("calibration_done_under", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select standard" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nabl">NABL</SelectItem>
-                    <SelectItem value="non_nabl">Non NABL</SelectItem>
-                    
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 md:col-span-3">
                 <Label>Remarks</Label>
-                <Input {...form.register("gauge_condition")} placeholder="Enter remarks" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Last Calibration Certificate No.</Label>
-                <Input
-                  {...form.register("last_calibration_certificate_no")}
-                  placeholder="Enter certificate number"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Date of Certificate</Label>
-                <Input
-                  type="date"
-                  {...form.register("date_of_certificate")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Calibration By</Label>
-                <Input
-                  {...form.register("calibration_by")}
-                  placeholder="Enter calibration by"
+                <textarea
+                  {...form.register("remarks")}
+                  className="min-h-[96px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  placeholder="Add optional remarks"
                 />
               </div>
 
               <div className="space-y-2 md:col-span-3">
-                <Label>Observations</Label>
+                <Label>Upload Calibration Certificate (PDF/Image) *</Label>
                 <Input
-                  {...form.register("observations")}
-                  placeholder="Enter observations"
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null
+                    setCertificateFile(file)
+                  }}
                 />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label>Maintenance & Other Details</Label>
-                <Input
-                  {...form.register("maintenance_other_details")}
-                  placeholder="Enter maintenance details"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Keep Record History Card</Label>
-                <div className="flex items-center gap-4 rounded-md border px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={form.watch("keep_record_history_card") === true}
-                      onCheckedChange={(checked) => form.setValue("keep_record_history_card", checked === true)}
-                    />
-                    <span className="text-sm">Yes</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={form.watch("keep_record_history_card") === false}
-                      onCheckedChange={(checked) => {
-                        if (checked === true) form.setValue("keep_record_history_card", false)
-                      }}
-                    />
-                    <span className="text-sm">No</span>
-                  </div>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Accepted formats: PDF, JPG, JPEG, PNG, WEBP.
+                </p>
+                {certificateFile ? (
+                  <p className="text-xs font-medium text-foreground">Selected file: {certificateFile.name}</p>
+                ) : null}
               </div>
             </div>
+
             <div className="flex gap-2">
               <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Create Gauge"}
+                <Plus className="mr-2 h-4 w-4" />
+                {isSaving ? "Saving..." : "Add Existing Gauge"}
               </Button>
               <Button type="button" variant="outline" onClick={resetForm}>
                 Reset
@@ -347,7 +380,6 @@ export function GaugeMasterPage() {
           </form>
         </CardContent>
       </Card>
-
     </div>
   )
 }

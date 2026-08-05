@@ -4,7 +4,7 @@ import { DashboardLayout } from "./components/DashboardLayout"
 import { Login } from "./pages/Login"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { usePageTitle } from "./hooks/usePageTitle"
-import { useAuth } from "./contexts/AuthContext"
+import { useAuth } from "./hooks/useAuth"
 import { Skeleton } from "./components/ui/skeleton"
 import { Card, CardContent, CardHeader } from "./components/ui/card"
 
@@ -15,6 +15,7 @@ const History = lazy(() => import("./pages/History").then(m => ({ default: m.His
 const CalibrationCertificates = lazy(() => import("./pages/CalibrationCertificates").then(m => ({ default: m.CalibrationCertificates })))
 const GaugeDetail = lazy(() => import("./pages/GaugeDetail").then(m => ({ default: m.GaugeDetail })))
 const Analytics = lazy(() => import("./pages/Analytics").then(m => ({ default: m.Analytics })))
+const MonthlyPlanningPage = lazy(() => import("./pages/MonthlyPlanning"))
 const GaugeLifePredictionPage = lazy(() => import("./pages/gauge-health/GaugeLifePrediction").then(m => ({ default: m.GaugeLifePredictionPage })))
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })))
 const InwardPage = lazy(() => import("./pages/transactions/InwardPage"))
@@ -71,7 +72,7 @@ function AppContent() {
         <Route path="reports/calibration-due-report" element={<Suspense fallback={<PageLoader />}><CalibrationDueReportPage /></Suspense>} />
         <Route path="calibration-certificates" element={<Suspense fallback={<PageLoader />}><CalibrationCertificates /></Suspense>} />
         <Route path="analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
-        <Route path="monthly-planning" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+        <Route path="monthly-planning" element={<Suspense fallback={<PageLoader />}><MonthlyPlanningPage /></Suspense>} />
         <Route path="gauge-life-prediction" element={<Suspense fallback={<PageLoader />}><GaugeLifePredictionPage /></Suspense>} />
         <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
         <Route path="transactions/inward" element={<Suspense fallback={<PageLoader />}><InwardPage /></Suspense>} />

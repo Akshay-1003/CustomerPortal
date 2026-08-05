@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { useAuth } from "@/contexts/AuthContext"
+import { useAuth } from "@/hooks/useAuth"
 import { useOrganizations } from "@/hooks/useOrganizations"
 
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,28 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const errorWithResponse = error as {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+
+    if (errorWithResponse.response?.data?.message) {
+      return errorWithResponse.response.data.message
+    }
+  }
+
+  return "Login failed. Please try again."
+}
+
 export function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
@@ -62,15 +84,10 @@ export function Login() {
     try {
       await login(values)
       navigate("/", { replace: true })
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Login failed. Please try again."
-
+    } catch (error: unknown) {
       form.setError("root", {
         type: "server",
-        message,
+        message: getErrorMessage(error),
       })
     }
   }

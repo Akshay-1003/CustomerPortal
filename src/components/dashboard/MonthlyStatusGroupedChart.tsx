@@ -24,9 +24,9 @@ export function MonthlyStatusGroupedChart({ data }: MonthlyStatusGroupedChartPro
   return (
     <Card className="border-border/70 shadow-sm">
       <CardHeader>
-        <CardTitle>Monthly Status Grouped Bar Chart</CardTitle>
+        <CardTitle>Monthly Calibration Overview</CardTitle>
         <CardDescription>
-          Compare the planned load with actual completion, pending workload, and overdue risk month by month.
+          Compare planned, completed, pending, and overdue counts month by month.
         </CardDescription>
       </CardHeader>
       <CardContent>

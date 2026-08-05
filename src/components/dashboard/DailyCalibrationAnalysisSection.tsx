@@ -4,10 +4,7 @@ import {
   AlertCircle,
   BarChart3,
   CalendarDays,
-  Gauge,
   RefreshCw,
-  Target,
-  TriangleAlert,
 } from "lucide-react"
 import {
   Bar,
@@ -54,17 +51,11 @@ import {
   DASHBOARD_MONTH_OPTIONS,
   normalizeDailyCalibrationResponse,
 } from "@/lib/dailyCalibrationDashboard"
-import {
-  CALIBRATION_CHART_COLORS,
-  formatDashboardNumber,
-  formatDashboardPercentage,
-} from "@/lib/monthlyCalibrationDashboard"
+import { CALIBRATION_CHART_COLORS, formatDashboardNumber } from "@/lib/monthlyCalibrationDashboard"
 
 interface DailyCalibrationAnalysisSectionProps {
   selectedYear: number
   selectedMonth: number
-  yearOptions: number[]
-  onYearChange: (year: number) => void
   onMonthChange: (month: number) => void
 }
 
@@ -105,19 +96,9 @@ function DailySectionSkeleton() {
   )
 }
 
-function getDailyStatus(planned: number, completed: number, pending: number, overdue: number) {
-  if (overdue > 0) return { label: "Overdue Risk", className: "border-red-200 bg-red-50 text-red-700" }
-  if (pending > 0) return { label: "Pending Load", className: "border-amber-200 bg-amber-50 text-amber-700" }
-  if (planned > 0 && completed >= planned) return { label: "On Track", className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
-  if (planned === 0 && completed > 0) return { label: "Backlog Closed", className: "border-blue-200 bg-blue-50 text-blue-700" }
-  return { label: "No Activity", className: "border-slate-200 bg-slate-50 text-slate-700" }
-}
-
 export function DailyCalibrationAnalysisSection({
   selectedYear,
   selectedMonth,
-  yearOptions,
-  onYearChange,
   onMonthChange,
 }: DailyCalibrationAnalysisSectionProps) {
   const {
@@ -137,39 +118,32 @@ export function DailyCalibrationAnalysisSection({
 
   const kpiCards = [
     {
-      title: "Planned Days",
-      value: formatDashboardNumber(totals.plannedDays),
-      helper: "Dates carrying at least one planned calibration task.",
+      title: "Total Planned",
+      value: formatDashboardNumber(totals.planned),
+      helper: "Total planned gauges for the selected month.",
       icon: CalendarDays,
       iconClassName: "bg-blue-50 text-blue-700",
     },
     {
-      title: "Active Days",
-      value: formatDashboardNumber(totals.activeDays),
-      helper: "Dates with plan, completion, pending, or overdue activity.",
-      icon: Gauge,
-      iconClassName: "bg-slate-100 text-slate-700",
-    },
-    {
-      title: "Peak Completed Day",
-      value: totals.peakCompletedDay ? formatDashboardNumber(totals.peakCompletedDay.value) : "--",
-      helper: totals.peakCompletedDay ? totals.peakCompletedDay.dateLabel : "No completion data for selected month.",
+      title: "Total Completed",
+      value: formatDashboardNumber(totals.completed),
+      helper: "API-reported completed calibrations for the selected month.",
       icon: BarChart3,
       iconClassName: "bg-emerald-50 text-emerald-700",
     },
     {
-      title: "Overdue Days",
-      value: formatDashboardNumber(totals.overdueDays),
-      helper: "Dates where overdue gauges created immediate execution pressure.",
-      icon: TriangleAlert,
-      iconClassName: "bg-red-50 text-red-700",
+      title: "Total Pending",
+      value: formatDashboardNumber(totals.pending),
+      helper: "Pending calibrations returned by the API for the selected month.",
+      icon: CalendarDays,
+      iconClassName: "bg-amber-50 text-amber-700",
     },
     {
-      title: "Completion %",
-      value: formatDashboardPercentage(totals.completionPercentage),
-      helper: "Month-level completion against day-wise planned workload.",
-      icon: Target,
-      iconClassName: "bg-emerald-50 text-emerald-700",
+      title: "Total Overdue",
+      value: formatDashboardNumber(totals.overdue),
+      helper: "Overdue calibrations returned by the API for the selected month.",
+      icon: AlertCircle,
+      iconClassName: "bg-red-50 text-red-700",
     },
   ]
 
@@ -183,30 +157,14 @@ export function DailyCalibrationAnalysisSection({
               Daily Calibration Analysis
             </div>
             <div>
-              <CardTitle>Date-wise calibration planning, completion, pending, and overdue activity</CardTitle>
+              <CardTitle>Daily Calibration Overview</CardTitle>
               <CardDescription className="mt-1">
-                Select a month and year to inspect which exact dates carried calibration load, completion output, and overdue risk.
+                Review daily planned and executed calibration counts for {selectedMonthLabel} {selectedYear}.
               </CardDescription>
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="daily-calibration-year">Year</Label>
-              <Select value={selectedYear.toString()} onValueChange={(value) => onYearChange(Number(value))}>
-                <SelectTrigger id="daily-calibration-year" className="w-full bg-background">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((yearOption) => (
-                    <SelectItem key={yearOption} value={yearOption.toString()}>
-                      {yearOption}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="daily-calibration-month">Month</Label>
               <Select value={selectedMonth.toString()} onValueChange={(value) => onMonthChange(Number(value))}>
@@ -235,8 +193,7 @@ export function DailyCalibrationAnalysisSection({
 
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{selectedMonthLabel} {selectedYear}</Badge>
-          <Badge variant="outline">Daily operational status API</Badge>
-          <Badge variant="outline">Graphical and tabular view</Badge>
+          <Badge variant="outline">Daily calibration API</Badge>
         </div>
       </CardHeader>
 
@@ -271,7 +228,7 @@ export function DailyCalibrationAnalysisSection({
           </Card>
         ) : (
           <>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {kpiCards.map((card) => {
                 const Icon = card.icon
                 return (
@@ -429,7 +386,7 @@ export function DailyCalibrationAnalysisSection({
               <TabsContent value="tabular" className="space-y-6">
                 <Card className="border-border/70 shadow-sm">
                   <CardHeader>
-                    <CardTitle>Date-wise Calibration Table</CardTitle>
+                    <CardTitle>Daily Calibration Overview</CardTitle>
                     <CardDescription>
                       Day-by-day calibration planning and execution details for {selectedMonthLabel} {selectedYear}.
                     </CardDescription>
@@ -446,15 +403,10 @@ export function DailyCalibrationAnalysisSection({
                               <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Completed</TableHead>
                               <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Pending</TableHead>
                               <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Overdue</TableHead>
-                              <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Completion %</TableHead>
-                              <TableHead className="sticky top-0 z-10 bg-background/95 text-right backdrop-blur">Overdue %</TableHead>
-                              <TableHead className="sticky top-0 z-10 bg-background/95 backdrop-blur">Daily Status</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {dailyData.map((day) => {
-                              const status = getDailyStatus(day.planned, day.completed, day.pending, day.overdue)
-
                               return (
                                 <TableRow key={day.dateKey} className="hover:bg-muted/20">
                                   <TableCell className="font-medium">{day.dateLabel}</TableCell>
@@ -463,11 +415,6 @@ export function DailyCalibrationAnalysisSection({
                                   <TableCell className="text-right text-emerald-700">{formatDashboardNumber(day.completed)}</TableCell>
                                   <TableCell className="text-right text-amber-700">{formatDashboardNumber(day.pending)}</TableCell>
                                   <TableCell className="text-right text-red-700">{formatDashboardNumber(day.overdue)}</TableCell>
-                                  <TableCell className="text-right">{formatDashboardPercentage(day.completionPercentage)}</TableCell>
-                                  <TableCell className="text-right text-red-700">{formatDashboardPercentage(day.overduePercentage)}</TableCell>
-                                  <TableCell>
-                                    <Badge className={status.className}>{status.label}</Badge>
-                                  </TableCell>
                                 </TableRow>
                               )
                             })}

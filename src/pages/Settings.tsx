@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card"
-import { useAuth } from "@/contexts/AuthContext"
+import { useAuth } from "@/hooks/useAuth"
 import { useOrganizations } from "@/hooks/useOrganizations"
 
 export function Settings() {
@@ -7,9 +7,9 @@ export function Settings() {
   const profile = user?.user
   const { data: organizations, isLoading: isLoadingOrgs } = useOrganizations()
 
-  const displayValue = (value: any, fallback = "Not Available") => {
+  const displayValue = (value: unknown, fallback = "Not Available") => {
     if (!value || value === "None") return fallback
-    return value
+    return String(value)
   }
 const roles = [
   { value: "org_admin", label: "Organization Admin" },
