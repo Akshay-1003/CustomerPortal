@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -34,6 +35,9 @@ import {
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+const LOGIN_BACKGROUND_SRC = "/images/bg.jpeg"
 
 const loginSchema = z.object({
   organization_id: z.string().min(1, "Please select an organization"),
@@ -104,8 +108,30 @@ function parseLoginError(error: unknown): ParsedLoginError {
 export function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const { data: organizations, isLoading: isLoadingOrgs } =
-    useOrganizations()
+  const { data: organizations, isLoading: isLoadingOrgs } = useOrganizations()
+  const [isBackgroundReady, setIsBackgroundReady] = useState(false)
+
+  useEffect(() => {
+    const image = new Image()
+    image.src = LOGIN_BACKGROUND_SRC
+    image.decoding = "async"
+
+    if (image.complete) {
+      setIsBackgroundReady(true)
+      return
+    }
+
+    const handleLoad = () => setIsBackgroundReady(true)
+    const handleError = () => setIsBackgroundReady(true)
+
+    image.addEventListener("load", handleLoad)
+    image.addEventListener("error", handleError)
+
+    return () => {
+      image.removeEventListener("load", handleLoad)
+      image.removeEventListener("error", handleError)
+    }
+  }, [])
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -146,16 +172,24 @@ export function Login() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Background */}
+      <div className="absolute inset-0 bg-slate-950" />
       <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: "url(/images/bg.jpeg)",
-          filter: "brightness(0.72)",
-        }}
+        className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.28),_transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.92),rgba(15,23,42,0.7))]"
       />
-
-      <div className="absolute inset-0 bg-black/20" />
+      <img
+        src={LOGIN_BACKGROUND_SRC}
+        alt=""
+        aria-hidden="true"
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
+        onLoad={() => setIsBackgroundReady(true)}
+        className={cn(
+          "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
+          isBackgroundReady ? "opacity-100" : "opacity-0"
+        )}
+      />
+      <div className="absolute inset-0 bg-black/35" />
 
       <div className="relative flex min-h-screen items-center justify-center px-6 lg:px-20">
         <Card className="w-full max-w-md bg-white/95 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.35)] border-0 rounded-2xl">
@@ -165,6 +199,8 @@ export function Login() {
                 src="/images/logo.svg"
                 className="h-12"
                 alt="Company Logo"
+                loading="eager"
+                decoding="async"
               />
             </CardTitle>
           </CardHeader>
@@ -199,7 +235,7 @@ export function Login() {
                       >
                         <FormControl>
                           <SelectTrigger className="h-11">
-                            <SelectValue placeholder="Select organization" />
+                            <SelectValue placeholder={isLoadingOrgs ? "Loading organizations..." : "Select organization"} />
                           </SelectTrigger>
                         </FormControl>
 
@@ -273,7 +309,7 @@ export function Login() {
                 <Button
                   type="submit"
                   className="w-full h-12 text-base font-medium shadow-md"
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || isLoadingOrgs}
                 >
                   {form.formState.isSubmitting && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

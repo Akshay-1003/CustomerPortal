@@ -6,14 +6,17 @@ import { Badge } from "@/components/ui/badge"
 import { useOrganizationById } from "@/hooks/useOrganizations"
 import { authService } from "@/services/auth.service"
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
+import { RouteTransitionIndicator } from "@/components/RouteTransitionIndicator"
+import { Skeleton } from "@/components/ui/skeleton"
 
 
 export function DashboardLayout() {
   const organizationId = authService.getOrganizationId()
-  const { data: organization } = useOrganizationById(organizationId as string)
+  const { data: organization, isLoading: isOrganizationLoading } = useOrganizationById(organizationId as string)
 
   return (
     <SidebarProvider className="w-full max-w-full overflow-x-hidden">
+      <RouteTransitionIndicator />
       <AppSidebar />
       <SidebarInset className="min-w-0 max-w-full overflow-x-hidden">
         <header className="flex h-auto w-full max-w-full sm:h-16 shrink-0 items-center gap-2 border-b px-2 sm:px-4 py-2 sm:py-0 bg-stone-50 sticky top-0 z-50 overflow-x-hidden">
@@ -22,11 +25,13 @@ export function DashboardLayout() {
 
           {/* Organization Info */} 
           <div className="flex min-w-0 items-center gap-2">
-
-            <Badge variant="primary" className="text-xl max-w-full truncate">
-              {organization?.name || 'Loading...'}
-
-            </Badge>
+            {isOrganizationLoading ? (
+              <Skeleton className="h-10 w-56 rounded-full" />
+            ) : (
+              <Badge variant="primary" className="text-xl max-w-full truncate">
+                {organization?.name || "Organization"}
+              </Badge>
+            )}
            
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-2">

@@ -1,7 +1,6 @@
 import { createContext, useState, type ReactNode } from 'react'
 import { authService } from '@/services/auth.service'
 import type { LoginRequest, User } from '@/types/api'
-import { redirectToAppPath } from '@/lib/appNavigation'
 
 /* ----------------------------- */
 /* Types                         */
@@ -55,8 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (data: LoginRequest) => {
     await authService.login(data)
-    const auth = authService.getAuthContext();
-    // const user.  = authService.getAuthContext().user
+    const auth = authService.getAuthContext()
     const user = auth?.user as unknown as User
     if (!auth) throw new Error('Auth context not found after login')
     setUser({
@@ -72,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     authService.logout()
     setUser(null)
-    redirectToAppPath('/login')
   }
 
   return (

@@ -7,6 +7,8 @@ import { usePageTitle } from "./hooks/usePageTitle"
 import { useAuth } from "./hooks/useAuth"
 import { Skeleton } from "./components/ui/skeleton"
 import { Card, CardContent, CardHeader } from "./components/ui/card"
+import { Spinner } from "./components/ui/spinner"
+import { NavigationFeedbackProvider } from "./contexts/NavigationFeedbackContext"
 
 // Lazy load page components for better code splitting
 const GaugeListPage = lazy(() => import("./pages/GaugeList"))
@@ -27,13 +29,23 @@ const FormatNumberPage = lazy(() => import("./pages/FormatNumber"))
 
 // Loading fallback component
 const PageLoader = () => (
-  <Card className="w-full">
-    <CardHeader>
-      <Skeleton className="h-4 w-2/3" />
+  <Card className="w-full border-border/70 shadow-sm">
+    <CardHeader className="space-y-3">
+      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <Spinner className="size-4 text-primary" />
+        Loading page...
+      </div>
+      <Skeleton className="h-5 w-2/3" />
       <Skeleton className="h-4 w-1/2" />
     </CardHeader>
-    <CardContent>
-      <Skeleton className="aspect-video w-full" />
+    <CardContent className="space-y-3">
+      <Skeleton className="h-12 w-full" />
+      <Skeleton className="h-64 w-full" />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
     </CardContent>
   </Card>
 )
@@ -89,7 +101,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <NavigationFeedbackProvider>
+        <AppContent />
+      </NavigationFeedbackProvider>
     </BrowserRouter>
   )
 }

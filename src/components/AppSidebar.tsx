@@ -1,6 +1,5 @@
 import {
   ChevronRight, Gauge, List, FileText,
-  // Settings, 
   LogOut,
   User,
   Package, ArrowRight, ArrowLeft, FileBarChart2, Activity, CalendarDays, Cpu,
@@ -31,8 +30,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  // DropdownMenuLabel,
-  // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
@@ -40,6 +37,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useCallback } from "react"
+import { useNavigationFeedback } from "@/hooks/useNavigationFeedback"
 
 interface MenuItem {
   title: string
@@ -68,13 +66,6 @@ const menuItems: MenuItem[] = [
     items: [
       { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list.*" },
       { title: "Format Numbers", icon: FileText, href: "/gauge-management/format-numbers", matchPattern: "/gauge-management/format-numbers.*" },
-      // {
-      //   title: "Calibration Certificates",
-      //   icon: FileText,
-      //   href: "/gauge-list/calibration-certificates",
-      //   matchPattern: "/gauge-list/calibration-certificates.*",
-      //   disabled: true,
-      // },
     ],
   },
   {
@@ -92,6 +83,7 @@ export function AppSidebar() {
   const location = useLocation()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { startNavigation } = useNavigationFeedback()
   const matchesPath = useCallback(
     (path?: string, matchPattern?: string) => {
       if (!path && !matchPattern) return false
@@ -120,16 +112,22 @@ export function AppSidebar() {
     return false
   }
 
+  const handleMenuNavigation = useCallback(
+    (path?: string) => {
+      if (!path) return
+      startNavigation(path)
+    },
+    [startNavigation]
+  )
+
   return (
     <Sidebar className="border-r bg-background/80 backdrop-blur-xl">
-      {/* HEADER */}
       <SidebarHeader className="p-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
         <div className="flex items-center gap-3">
          <img src="/images/logo.svg" alt="Logo" />
         </div>
       </SidebarHeader>
 
-      {/* CONTENT */}
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -182,7 +180,10 @@ export function AppSidebar() {
                                     "bg-primary/10 text-primary border border-primary/30 shadow-sm font-medium"
                                   )}
                                 >
-                                  <Link to={subItem.disabled ? "#" : (subItem.href || "#")}>
+                                  <Link
+                                    to={subItem.disabled ? "#" : (subItem.href || "#")}
+                                    onClick={() => handleMenuNavigation(subItem.disabled ? undefined : subItem.href)}
+                                  >
                                     <subItem.icon />
                                     <span>{subItem.title}</span>
                                   </Link>
@@ -206,7 +207,7 @@ export function AppSidebar() {
                         "bg-primary text-primary-foreground shadow-md hover:bg-primary"
                       )}
                     >
-                      <Link to={item.href || "/"}>
+                      <Link to={item.href || "/"} onClick={() => handleMenuNavigation(item.href)}>
                         <item.icon className="h-4 w-4" />
                         <span className="font-medium">{item.title}</span>
                       </Link>
@@ -220,29 +221,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* FOOTER */}
       <SidebarFooter className="p-4 border-t bg-gradient-to-r from-transparent to-primary/5">
-        {/* <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="Settings"
-              isActive={location.pathname === "/settings"}
-              className={cn(
-                "rounded-xl px-3 py-2.5 transition-all duration-300 hover:bg-primary/10 hover:text-primary",
-                location.pathname === "/settings" &&
-                "bg-primary text-primary-foreground shadow-md hover:bg-primary"
-              )}
-            >
-              <Link to="/settings">
-                <Settings className="h-4 w-4" />
-                <span className="font-medium">Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu> */}
-
-        {/* USER */}
         <div className="pt-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -264,13 +243,20 @@ export function AppSidebar() {
 
               <DropdownMenuItem
                 className=""
-                onClick={() => navigate('/settings')}
+                onClick={() => {
+                  startNavigation("/settings")
+                  navigate("/settings")
+                }}
               >
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={logout}
+                onClick={() => {
+                  startNavigation("/login")
+                  logout()
+                  navigate("/login", { replace: true })
+                }}
                 className="text-destructive focus:text-destructive"
               >
                 <LogOut className="mr-2 h-4 w-4" />
