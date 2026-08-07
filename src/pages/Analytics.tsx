@@ -1,147 +1,113 @@
-import { useMemo, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { useMemo, useState } from "react"
+import {
+  AlertCircle,
+  AlertTriangle,
+  CalendarRange,
+  CheckCircle2,
+  Cpu,
+  Loader2,
+  TrendingUp,
+} from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts'
-import {
-  Calendar,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
-  Loader2,
-  AlertCircle,
-  ChevronRight,
-} from 'lucide-react'
-import { useAllGauges } from '@/hooks/useGauges'
-import {
-  aggregateGaugesByMonth,
-  calculateCalibrationSummary,
-  analyzeOverdueGauges,
-  calculateCalibrationDue,
-  formatCalibrationDate,
-  formatDaysUntilDue,
-  type MonthlyStats,
-} from '@/lib/calibrationUtils'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import type { Gauge } from '@/types/api'
+} from "@/components/ui/select"
+import { useAllGauges } from "@/hooks/useGauges"
+import { useMonthlyCalibrationDashboard } from "@/hooks/useMonthlyCalibrationDashboard"
+import { analyzeOverdueGauges, calculateCalibrationDue, formatDaysUntilDue } from "@/lib/calibrationUtils"
+import { calculateTotals, formatDashboardNumber, normalizeMonthlyCalibrationResponse } from "@/lib/monthlyCalibrationDashboard"
+
+function DashboardMetricCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  iconClassName,
+  valueClassName,
+}: {
+  title: string
+  value: string | number
+  description: string
+  icon: typeof CalendarRange
+  iconClassName: string
+  valueClassName?: string
+}) {
+  return (
+    <Card className="border-border/70 shadow-sm">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="space-y-1">
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          <div className={`text-2xl font-semibold tracking-tight ${valueClassName || ""}`}>{value}</div>
+        </div>
+        <div className={`rounded-full p-2.5 ${iconClassName}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
+  )
+}
 
 export function Analytics() {
-  const currentYear = new Date().getFullYear()
+  const today = new Date()
+  const currentYear = today.getFullYear()
   const [selectedYear, setSelectedYear] = useState(currentYear)
-  const [selectedMonth, setSelectedMonth] = useState<MonthlyStats | null>(null)
-  const [showMonthDetail, setShowMonthDetail] = useState(false)
 
-  const { data: gaugeItems = [], isLoading, isError, error } = useAllGauges()
+  const yearOptions = useMemo(() => {
+    return Array.from({ length: 7 }, (_, index) => currentYear - 3 + index)
+  }, [currentYear])
 
-  // ============================================
-  // MEMOIZED CALCULATIONS
-  // ============================================
+  const {
+    data: dashboardData,
+    isLoading: isDashboardLoading,
+    isError: isDashboardError,
+    error: dashboardError,
+  } = useMonthlyCalibrationDashboard(selectedYear)
 
-  const monthlyData = useMemo(() => {
-    if (gaugeItems.length === 0) return []
-    return aggregateGaugesByMonth(gaugeItems, selectedYear)
-  }, [gaugeItems, selectedYear])
+  const {
+    data: gaugeItems = [],
+    isLoading: isGaugeLoading,
+    isError: isGaugeError,
+    error: gaugeError,
+  } = useAllGauges()
 
-  const summary = useMemo(() => {
-    if (gaugeItems.length === 0) return null
-    return calculateCalibrationSummary(gaugeItems)
-  }, [gaugeItems])
+  const monthlyData = useMemo(() => normalizeMonthlyCalibrationResponse(dashboardData), [dashboardData])
+  const totals = useMemo(() => calculateTotals(monthlyData), [monthlyData])
 
   const overdueAnalysis = useMemo(() => {
     if (gaugeItems.length === 0) return null
     return analyzeOverdueGauges(gaugeItems, selectedYear)
   }, [gaugeItems, selectedYear])
 
-  // Chart data for visualizations
-  const chartData = useMemo(() => {
-    return monthlyData.map((month) => ({
-      name: month.monthName.substring(0, 3), // Short month name
-      Completed: month.completed,
-      Pending: month.pending,
-      Overdue: month.overdue,
-      Total: month.total,
-    }))
-  }, [monthlyData])
-
-  // Year options (current year ± 2 years)
-  const yearOptions = useMemo(() => {
-    const years = []
-    for (let i = -2; i <= 2; i++) {
-      years.push(currentYear + i)
-    }
-    return years
-  }, [currentYear])
-
-  // ============================================
-  // EVENT HANDLERS
-  // ============================================
-
-  const handleMonthClick = (month: MonthlyStats) => {
-    if (month.total > 0) {
-      setSelectedMonth(month)
-      setShowMonthDetail(true)
-    }
-  }
-
-  const getStatusBadge = (gauge: Gauge) => {
-    const dueInfo = calculateCalibrationDue(gauge)
-    
-    if (dueInfo.isCompleted) {
-      return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>
-    } else if (dueInfo.isOverdue) {
-      return <Badge className="bg-red-500 hover:bg-red-600">Overdue</Badge>
-    } else {
-      return <Badge className="bg-blue-500 hover:bg-blue-600">Pending</Badge>
-    }
-  }
-
-  // ============================================
-  // LOADING & ERROR STATES
-  // ============================================
+  const isLoading = isDashboardLoading || isGaugeLoading
+  const isError = isDashboardError || isGaugeError
+  const error = dashboardError || gaugeError
+  const isEmpty = !isLoading && monthlyData.length === 0
 
   if (isLoading) {
     return (
       <div className="space-y-6 w-full">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
-          <p className="text-muted-foreground">
-            Operational calibration status, due tracking, and overdue visibility.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+            <p className="text-muted-foreground">
+              Monitor calibration health, selected-year progress, and urgent workload in one view.
+            </p>
+          </div>
         </div>
         <Card className="p-12">
           <div className="flex flex-col items-center justify-center gap-4 text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <div>
-              <h3 className="text-lg font-semibold">Loading Analytics</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Processing calibration data...
-              </p>
+              <h3 className="text-lg font-semibold">Loading Dashboard</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Preparing the selected year summary...</p>
             </div>
           </div>
         </Card>
@@ -152,41 +118,60 @@ export function Analytics() {
   if (isError) {
     return (
       <div className="space-y-6 w-full">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
-          <p className="text-muted-foreground">
-            Operational calibration status, due tracking, and overdue visibility.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+            <p className="text-muted-foreground">
+              Monitor calibration health, selected-year progress, and urgent workload in one view.
+            </p>
+          </div>
         </div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Analytics</AlertTitle>
+          <AlertTitle>Error Loading Dashboard</AlertTitle>
           <AlertDescription className="mt-2">
             {(error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
               (error as Error)?.message ||
-              'Failed to load analytics data.'}
+              "Failed to load dashboard data."}
           </AlertDescription>
         </Alert>
       </div>
     )
   }
 
-  if (gaugeItems.length === 0) {
+  if (isEmpty) {
     return (
       <div className="space-y-6 w-full">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
-          <p className="text-muted-foreground">
-            Operational calibration status, due tracking, and overdue visibility.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+            <p className="text-muted-foreground">
+              Monitor calibration health, selected-year progress, and urgent workload in one view.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Year:</span>
+            <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(Number(value))}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((yearOption) => (
+                  <SelectItem key={yearOption} value={yearOption.toString()}>
+                    {yearOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <Card className="p-12">
           <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <Calendar className="h-12 w-12 text-muted-foreground" />
+            <CalendarRange className="h-12 w-12 text-muted-foreground" />
             <div>
-              <h3 className="text-lg font-semibold">No Gauge Data Available</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add gauges to your organization to see calibration analytics.
+              <h3 className="text-lg font-semibold">No calibration data found</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                No dashboard totals are available for the selected year {selectedYear}.
               </p>
             </div>
           </div>
@@ -195,30 +180,25 @@ export function Analytics() {
     )
   }
 
-  // ============================================
-  // MAIN DASHBOARD UI
-  // ============================================
-
   return (
     <div className="space-y-6 w-full">
-      {/* Header with Year Selector */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Calibration Overview</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
-            Operational calibration status, due tracking, and overdue visibility.
+            Monitor calibration health, selected-year progress, and urgent workload in one view.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">Year:</span>
-          <Select value={selectedYear.toString()} onValueChange={(val) => setSelectedYear(parseInt(val))}>
+          <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(Number(value))}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {yearOptions.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
+              {yearOptions.map((yearOption) => (
+                <SelectItem key={yearOption} value={yearOption.toString()}>
+                  {yearOption}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -226,202 +206,114 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* KPI Summary Cards */}
-      {summary && (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Gauges</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.totalGauges}</div>
-              <p className="text-xs text-muted-foreground">Across all statuses</p>
-            </CardContent>
-          </Card>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+        <DashboardMetricCard
+          title="Total Planned"
+          value={formatDashboardNumber(totals.planned)}
+          description={`Total gauges planned for calibration in ${selectedYear}.`}
+          icon={CalendarRange}
+          iconClassName="bg-blue-50 text-blue-700"
+        />
+        <DashboardMetricCard
+          title="Completed"
+          value={formatDashboardNumber(totals.completed)}
+          description={`API-reported completed calibrations in ${selectedYear}.`}
+          icon={CheckCircle2}
+          iconClassName="bg-emerald-50 text-emerald-700"
+          valueClassName="text-emerald-600"
+        />
+        <DashboardMetricCard
+          title="Upcoming"
+          value={formatDashboardNumber(totals.pending)}
+          description={`Pending or upcoming calibrations still open in ${selectedYear}.`}
+          icon={TrendingUp}
+          iconClassName="bg-amber-50 text-amber-700"
+        />
+        <DashboardMetricCard
+          title="Overdue"
+          value={formatDashboardNumber(totals.overdue)}
+          description={`API-reported overdue calibrations in ${selectedYear}.`}
+          icon={AlertTriangle}
+          iconClassName="bg-red-50 text-red-700"
+          valueClassName="text-red-600"
+        />
+      </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Due This Month</CardTitle>
-              <Clock className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.totalDueThisMonth}</div>
-              <p className="text-xs text-muted-foreground">Require calibration</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{summary.totalOverdue}</div>
-              <p className="text-xs text-muted-foreground">Need immediate attention</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{summary.totalCompletedThisMonth}</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
-              <TrendingUp className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.totalUpcomingNext3Months}</div>
-              <p className="text-xs text-muted-foreground">Next 3 months</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Critical Alert for Oldest Overdue */}
-      {summary && summary.oldestOverdueGauge.gauge && (
-        <Alert variant="destructive" className="border-2">
-          <AlertTriangle className="h-5 w-5" />
-          <AlertTitle className="text-lg font-semibold">Critical: Oldest Overdue Gauge</AlertTitle>
-          <AlertDescription className="mt-2">
-            <span className="font-medium">{summary.oldestOverdueGauge.gauge.master_gauge}</span> 
-            {' '}(ID: {summary.oldestOverdueGauge.gauge.identification_number}) is{' '}
-            <span className="font-bold">{summary.oldestOverdueGauge.daysPastDue} days overdue</span>.
-            Immediate calibration required.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Month-wise Stacked Bar Chart */}
-      <Card>
+      <Card className="border-border/70 shadow-sm">
         <CardHeader>
-          <CardTitle>Month-wise Calibration Status ({selectedYear})</CardTitle>
+          <CardTitle>Track Gauge and Instrument Status</CardTitle>
           <CardDescription>
-            Operational breakdown of completed, pending, and overdue calibrations by month.
+            Lifecycle status visibility, movement tracking, and richer instrument-state monitoring are being prepared.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="Completed" stackId="a" fill="#10b981" />
-              <Bar dataKey="Pending" stackId="a" fill="#3b82f6" />
-              <Bar dataKey="Overdue" stackId="a" fill="#ef4444" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+          <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 p-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                  <Cpu className="h-3.5 w-3.5" />
+                  Coming Soon
+                </div>
+                <h3 className="text-2xl font-semibold tracking-tight">Advanced gauge and instrument status tracking</h3>
+                <p className="text-sm text-muted-foreground sm:text-base">
+                  We are still completing this module. It will cover operational state, movement visibility,
+                  instrument readiness, and richer lifecycle tracking in a future update.
+                </p>
+              </div>
 
-    
-
-      {/* Month-wise Summary Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Operational Monthly Summary ({selectedYear})</CardTitle>
-          <CardDescription>
-            Click on a month to inspect detailed due and status-level gauge information.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Month</TableHead>
-                  <TableHead className="text-center">Total Due</TableHead>
-                  <TableHead className="text-center">Completed</TableHead>
-                  <TableHead className="text-center">Pending</TableHead>
-                  <TableHead className="text-center">Overdue</TableHead>
-                  <TableHead className="text-center">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlyData.map((month) => (
-                  <TableRow 
-                    key={month.month}
-                    className={month.total > 0 ? 'cursor-pointer hover:bg-muted/50' : ''}
-                  >
-                    <TableCell className="font-medium">{month.monthName}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline">{month.total}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="text-green-600 font-medium">{month.completed}</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="text-blue-600 font-medium">{month.pending}</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="text-red-600 font-medium">{month.overdue}</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {month.total > 0 ? (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleMonthClick(month)}
-                        >
-                          View Details <ChevronRight className="ml-1 h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No data</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+              <div className="grid gap-3 sm:grid-cols-3 lg:max-w-md">
+                <div className="rounded-xl border border-background bg-background/80 p-4">
+                  <p className="text-sm font-medium">Movement Tracking</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Inward, outward, and usage status visibility.</p>
+                </div>
+                <div className="rounded-xl border border-background bg-background/80 p-4">
+                  <p className="text-sm font-medium">Instrument Health</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Readiness, service state, and lifecycle insights.</p>
+                </div>
+                <div className="rounded-xl border border-background bg-background/80 p-4">
+                  <p className="text-sm font-medium">Alerts</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Better operational alerts and status summaries.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Overdue Analysis */}
       {overdueAnalysis && overdueAnalysis.totalOverdue > 0 && (
-        <Card className="border-red-200">
+        <Card className="border-red-200 shadow-sm">
           <CardHeader>
             <CardTitle className="text-red-600">Overdue Attention</CardTitle>
             <CardDescription>
-              Detailed breakdown of overdue calibrations requiring immediate action
+              A quick view of the most critical overdue calibrations for the selected year {selectedYear}.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg bg-red-50 p-4">
               <div>
-                <p className="text-sm font-medium text-red-900 dark:text-red-100">Total Overdue Gauges</p>
+                <p className="text-sm font-medium text-red-900">Total Overdue Gauges</p>
                 <p className="text-2xl font-bold text-red-600">{overdueAnalysis.totalOverdue}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-500" />
             </div>
 
             {overdueAnalysis.criticalOverdue.length > 0 && (
-              <div className="p-4 border-2 border-red-500 rounded-lg">
-                <p className="text-sm font-semibold text-red-600 mb-2">
-                  🚨 Critical: {overdueAnalysis.criticalOverdue.length} gauges overdue by more than 30 days
+              <div className="rounded-lg border-2 border-red-500 p-4">
+                <p className="mb-2 text-sm font-semibold text-red-600">
+                  Critical: {overdueAnalysis.criticalOverdue.length} gauges overdue by more than 30 days
                 </p>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   {overdueAnalysis.criticalOverdue.slice(0, 5).map((gauge) => {
                     const dueInfo = calculateCalibrationDue(gauge)
                     return (
-                      <div key={gauge.id} className="flex justify-between">
-                        <span>{gauge.master_gauge} ({gauge.identification_number})</span>
+                      <div key={gauge.id} className="flex justify-between gap-4">
+                        <span>{gauge.master_gauge} ({gauge.identification_number || "N/A"})</span>
                         <span className="font-medium">{formatDaysUntilDue(dueInfo.daysUntilDue)}</span>
                       </div>
                     )
                   })}
                   {overdueAnalysis.criticalOverdue.length > 5 && (
-                    <p className="text-xs text-muted-foreground italic pt-2">
+                    <p className="pt-2 text-xs italic text-muted-foreground">
                       And {overdueAnalysis.criticalOverdue.length - 5} more...
                     </p>
                   )}
@@ -431,69 +323,6 @@ export function Analytics() {
           </CardContent>
         </Card>
       )}
-
-      {/* Month Detail Dialog */}
-      <Dialog open={showMonthDetail} onOpenChange={setShowMonthDetail}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedMonth?.monthName} {selectedYear} - Calibration Details
-            </DialogTitle>
-            <DialogDescription>
-              {selectedMonth?.total} gauge(s) due for calibration this month
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedMonth && selectedMonth.gauges.length > 0 && (
-            <div className="space-y-4">
-              {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Completed</p>
-                  <p className="text-2xl font-bold text-green-600">{selectedMonth.completed}</p>
-                </div>
-                <div className="text-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold text-blue-600">{selectedMonth.pending}</p>
-                </div>
-                <div className="text-center p-3 bg-red-50 dark:bg-red-950 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Overdue</p>
-                  <p className="text-2xl font-bold text-red-600">{selectedMonth.overdue}</p>
-                </div>
-              </div>
-
-              {/* Gauge List */}
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Gauge</TableHead>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Days</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedMonth.gauges.map((gauge) => {
-                      const dueInfo = calculateCalibrationDue(gauge)
-                      return (
-                        <TableRow key={gauge.id}>
-                          <TableCell className="font-medium">{gauge.master_gauge}</TableCell>
-                          <TableCell className="text-xs">{gauge.identification_number}</TableCell>
-                          <TableCell>{formatCalibrationDate(dueInfo.dueDate)}</TableCell>
-                          <TableCell>{getStatusBadge(gauge)}</TableCell>
-                          <TableCell className="text-xs">{formatDaysUntilDue(dueInfo.daysUntilDue)}</TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

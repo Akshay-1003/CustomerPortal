@@ -12,6 +12,8 @@ import { authService } from "@/services/auth.service"
 import type { Outward, OutwardGauge, OutwardGaugesResponse } from "@/types/api"
 import { toast } from "sonner"
 import { InwardOutwardPrintPreview } from "./InwardOutwardPrintPreview"
+import { formatAddressWithOptionalEmail } from "@/lib/organization"
+import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 
 const ITEMS_PER_PAGE = 10
 
@@ -71,6 +73,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export function InwardTable({ className }: InwardTableProps) {
+  const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo()
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -276,12 +279,8 @@ export function InwardTable({ className }: InwardTableProps) {
         <InwardOutwardPrintPreview
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
-          companyName={selectedOutward.client_org || "Company"}
-          companyAddress={
-            selectedOutward.address
-              ? `${selectedOutward.address.address_line_1 || ""} ${selectedOutward.address.address_line_2 || ""}, ${selectedOutward.address.city || ""}, ${selectedOutward.address.state || ""} ${selectedOutward.address.zip_code || ""}`.trim()
-              : "Address not available"
-          }
+          companyName={organizationName || selectedOutward.client_org || "Company"}
+          companyAddress={formatAddressWithOptionalEmail(selectedOutward.address) || organizationAddress}
           gauges={selectedGauges}
           selectedOutward={selectedOutward}
         />

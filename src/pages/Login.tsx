@@ -43,26 +43,62 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
+type LoginApiErrorTarget = "organization_id" | "email" | "password" | "Authorization" | string
 
+type LoginApiErrorItem = {
+  code?: string
+  message?: string
+  target?: LoginApiErrorTarget
+  type?: string
+}
+
+type ParsedLoginError = {
+  message: string
+  target?: LoginApiErrorTarget
+}
+
+function parseLoginError(error: unknown): ParsedLoginError {
   if (typeof error === "object" && error !== null) {
     const errorWithResponse = error as {
       response?: {
         data?: {
           message?: string
+          errors?: LoginApiErrorItem[]
         }
+      }
+      message?: string
+    }
+
+    const apiError = errorWithResponse.response?.data?.errors?.[0]
+    if (apiError?.message) {
+      return {
+        message: apiError.message,
+        target: apiError.target,
       }
     }
 
     if (errorWithResponse.response?.data?.message) {
-      return errorWithResponse.response.data.message
+      return {
+        message: errorWithResponse.response.data.message,
+      }
+    }
+
+    if (errorWithResponse.message) {
+      return {
+        message: errorWithResponse.message,
+      }
     }
   }
 
-  return "Login failed. Please try again."
+  if (error instanceof Error && error.message) {
+    return {
+      message: error.message,
+    }
+  }
+
+  return {
+    message: "Login failed. Please try again.",
+  }
 }
 
 export function Login() {
@@ -81,13 +117,29 @@ export function Login() {
   })
 
   const onSubmit = async (values: LoginFormValues) => {
+    form.clearErrors()
+
     try {
       await login(values)
       navigate("/", { replace: true })
     } catch (error: unknown) {
+      const parsedError = parseLoginError(error)
+
+      if (
+        parsedError.target === "organization_id" ||
+        parsedError.target === "email" ||
+        parsedError.target === "password"
+      ) {
+        form.setError(parsedError.target, {
+          type: "server",
+          message: parsedError.message,
+        })
+        return
+      }
+
       form.setError("root", {
         type: "server",
-        message: getErrorMessage(error),
+        message: parsedError.message,
       })
     }
   }
@@ -123,6 +175,15 @@ export function Login() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-5"
               >
+                <div className="space-y-1">
+                  <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                    Sign in
+                  </h1>
+                  <p className="text-sm text-slate-500">
+                    Enter your organization, email address, and password to continue.
+                  </p>
+                </div>
+
                 {/* Organization */}
                 <FormField
                   control={form.control}

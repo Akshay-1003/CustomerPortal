@@ -12,6 +12,7 @@ import { authService } from "@/services/auth.service"
 import type { Inward, InwardGauge } from "@/types/api"
 import { toast } from "sonner"
 import { OutwardChallanPrintPreview } from "./OutwardChallanPrintPreview"
+import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 
 const ITEMS_PER_PAGE = 10
 
@@ -47,6 +48,7 @@ function formatDate(value?: string): string {
 }
 
 export function OutwardTable({ className }: OutwardTableProps) {
+  const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo()
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState("")
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -235,8 +237,8 @@ export function OutwardTable({ className }: OutwardTableProps) {
         <OutwardChallanPrintPreview
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
-          companyName={selectedInward.client_org_name || "Company"}
-          companyAddress="151/1, Kalappanna Awade Textile Park, Kolhapur-416121 | calibration@company.com"
+          companyName={organizationName || selectedInward.client_org_name || "Company"}
+          companyAddress={organizationAddress}
           inward={selectedInward}
           gauges={selectedGauges}
         />

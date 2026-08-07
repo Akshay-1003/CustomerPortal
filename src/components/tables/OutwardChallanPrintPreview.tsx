@@ -1,9 +1,12 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import type { Inward, InwardGauge } from "@/types/api"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 import "./OutwardChallanPrintPreview.css"
-import { PrinterCheckIcon } from "lucide-react"
+import { toast } from "sonner"
+import { PrintPreviewActions } from "@/components/export/PrintPreviewActions"
+import { exportSpreadsheetData, exportTablePdf } from "@/lib/export/export.service"
+import type { DownloadFormat, ExportColumn } from "@/lib/export/types"
+
 type OutwardChallanPrintPreviewProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -12,6 +15,24 @@ type OutwardChallanPrintPreviewProps = {
   inward: Inward
   gauges: InwardGauge[]
 }
+
+const OUTWARD_EXPORT_COLUMNS: ExportColumn<InwardGauge>[] = [
+  { key: "client_org_name", header: "Client Name", accessor: (row) => row.client_org_name || "N/A", width: 22, pdfWidth: 22 },
+  { key: "master_gauge_name", header: "Gauge Name", accessor: (row) => row.master_gauge_name || "N/A", width: 24, pdfWidth: 24 },
+  { key: "identification_number", header: "Identification", accessor: (row) => row.identification_number || "N/A", width: 18, pdfWidth: 18 },
+  { key: "specifications", header: "Specifications", accessor: (row) => formatSpecificationForPrint(row.specifications), width: 24, pdfWidth: 24 },
+  { key: "manf_serial_number", header: "Serial", accessor: (row) => row.manf_serial_number || "N/A", width: 16, pdfWidth: 16 },
+  { key: "make", header: "Make", accessor: (row) => row.make || "N/A", width: 14, pdfWidth: 14 },
+  {
+    key: "frequency",
+    header: "Frequency",
+    accessor: (row) =>
+      row.calibration_frequency ? `${row.calibration_frequency} ${row.calibration_frequency_unit || ""}` : "N/A",
+    width: 14,
+    pdfWidth: 14,
+  },
+  { key: "inward_gauge_lab_id", header: "Lab ID", accessor: (row) => row.inward_gauge_lab_id || "N/A", width: 14, pdfWidth: 14 },
+]
 
 function escapeHtml(value: string): string {
   return value
@@ -144,6 +165,8 @@ export function OutwardChallanPrintPreview({
   inward,
   gauges,
 }: OutwardChallanPrintPreviewProps) {
+  const fileName = `${companyName}_outward_challan_${inward.inward_no || inward.id}`
+
   const onPrint = () => {
     const iframe = document.createElement("iframe")
     iframe.style.position = "fixed"
@@ -171,6 +194,41 @@ export function OutwardChallanPrintPreview({
     }, 250)
   }
 
+  const onDownload = (format: DownloadFormat) => {
+    const result =
+      format === "pdf"
+        ? exportTablePdf({
+            fileName,
+            title: `OUTWARD CHALLAN ${String(inward.inward_no || "")}`.trim(),
+            companyName,
+            companyAddress,
+            rows: gauges,
+            columns: OUTWARD_EXPORT_COLUMNS,
+          })
+        : exportSpreadsheetData({
+            fileName,
+            format,
+            sheets: [
+              {
+                name: "Outward Challan",
+                rows: gauges,
+                columns: OUTWARD_EXPORT_COLUMNS,
+              },
+            ],
+          })
+
+    if (!result.ok) {
+      toast.error(
+        result.reason === "empty"
+          ? "No rows available to export."
+          : "Unable to export because the document columns are not configured."
+      )
+      return
+    }
+
+    toast.success(`${result.format.toUpperCase()} export downloaded successfully.`)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[96vw] max-w-[96vw] h-[94vh] p-0">
@@ -182,9 +240,7 @@ export function OutwardChallanPrintPreview({
               <div className="oc-preview-title">OUTWARD CHALLAN</div>
             </div>
             <div className="oc-print-preview-header-actions">
-              <Button onClick={onPrint}>
-                <PrinterCheckIcon className="h-4 w-4" /> Print
-              </Button>
+              <PrintPreviewActions disabled={gauges.length === 0} onPrint={onPrint} onDownload={onDownload} />
             </div>
           </DialogHeader>
 
@@ -257,4 +313,3 @@ export function OutwardChallanPrintPreview({
     </Dialog>
   )
 }
-

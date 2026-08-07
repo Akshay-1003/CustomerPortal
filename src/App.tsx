@@ -9,7 +9,6 @@ import { Skeleton } from "./components/ui/skeleton"
 import { Card, CardContent, CardHeader } from "./components/ui/card"
 
 // Lazy load page components for better code splitting
-const Dashboard = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.Dashboard })))
 const GaugeListPage = lazy(() => import("./pages/GaugeList"))
 const History = lazy(() => import("./pages/History").then(m => ({ default: m.History })))
 const CalibrationCertificates = lazy(() => import("./pages/CalibrationCertificates").then(m => ({ default: m.CalibrationCertificates })))
@@ -60,7 +59,7 @@ function AppContent() {
           </ProtectedRoute>
         }   
       >
-        <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+        <Route index element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
         <Route path="gauge-list" element={<Suspense fallback={<PageLoader />}><GaugeListPage /></Suspense>} />
         <Route path="gauge-list/create" element={<Suspense fallback={<PageLoader />}><GaugeMasterPage /></Suspense>} />
         <Route path="gauge-management/format-numbers" element={<Suspense fallback={<PageLoader />}><FormatNumberPage /></Suspense>} />
@@ -71,8 +70,10 @@ function AppContent() {
         <Route path="reports/history-card/:id" element={<Suspense fallback={<PageLoader />}><HistoryCardDetailPage /></Suspense>} />
         <Route path="reports/calibration-due-report" element={<Suspense fallback={<PageLoader />}><CalibrationDueReportPage /></Suspense>} />
         <Route path="calibration-certificates" element={<Suspense fallback={<PageLoader />}><CalibrationCertificates /></Suspense>} />
-        <Route path="analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
-        <Route path="monthly-planning" element={<Suspense fallback={<PageLoader />}><MonthlyPlanningPage /></Suspense>} />
+        <Route path="analytics" element={<Navigate to="/" replace />} />
+        <Route path="dashboard" element={<Navigate to="/" replace />} />
+        <Route path="calibration-overview" element={<Suspense fallback={<PageLoader />}><MonthlyPlanningPage /></Suspense>} />
+        <Route path="monthly-planning" element={<Navigate to="/calibration-overview" replace />} />
         <Route path="gauge-life-prediction" element={<Suspense fallback={<PageLoader />}><GaugeLifePredictionPage /></Suspense>} />
         <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
         <Route path="transactions/inward" element={<Suspense fallback={<PageLoader />}><InwardPage /></Suspense>} />

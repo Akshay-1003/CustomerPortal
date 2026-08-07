@@ -1,6 +1,9 @@
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
+import { PrintPreviewActions } from "@/components/export/PrintPreviewActions"
+import { exportSpreadsheetData, exportTablePdf } from "@/lib/export/export.service"
+import type { DownloadFormat, ExportColumn } from "@/lib/export/types"
 import "./GaugeListPrintPreview.css"
 
 export type GaugeListPrintRow = {
@@ -23,6 +26,19 @@ type GaugeListPrintPreviewProps = {
   companyAddress?: string
 }
 
+const GAUGE_LIST_EXPORT_COLUMNS: ExportColumn<GaugeListPrintRow>[] = [
+  { key: "serialNo", header: "SN", accessor: "serialNo", width: 8, pdfWidth: 8 },
+  // { key: "clientOrganization", header: "Client Organization", accessor: "clientOrganization", width: 24, pdfWidth: 24 },
+  { key: "name", header: "Gauge Name", accessor: "name", width: 24, pdfWidth: 24 },
+  { key: "identification", header: "Identification", accessor: "identification", width: 18, pdfWidth: 18 },
+  { key: "specifications", header: "Specification", accessor: "specifications", width: 24, pdfWidth: 24 },
+  { key: "serial", header: "Serial", accessor: "serial", width: 16, pdfWidth: 16 },
+  { key: "frequency", header: "Cal. Freq.", accessor: "frequency", width: 16, pdfWidth: 16 },
+    { key: "make", header: "Make", accessor: "make", width: 16, pdfWidth: 16 },
+
+  { key: "remark", header: "Remark", accessor: "remark", width: 14, pdfWidth: 14 },
+]
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -38,14 +54,12 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
       (row) => `
         <tr>
           <td class="sn-col">${row.serialNo}</td>
-          <td>${escapeHtml(row.clientOrganization)}</td>
-          <td>${escapeHtml(row.name)}</td>
           <td>${escapeHtml(row.identification)}</td>
           <td>${escapeHtml(row.specifications)}</td>
           <td>${escapeHtml(row.serial)}</td>
           <td>${escapeHtml(row.frequency)}</td>
-          <td>${escapeHtml(row.remark)}</td>
           <td>${escapeHtml(row.make)}</td>
+          <td>${escapeHtml(row.remark)}</td>
         </tr>
       `
     )
@@ -84,18 +98,17 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
         <header class="print-header">
           <div class="company-name">${escapeHtml(companyName)}</div>
           <div class="company-address">${escapeHtml(companyAddress)}</div>
-          <div class="doc-title">GAUGE LIST / INSTRUMENT LIST</div>
+          <div class="doc-title">GAUGES AND INSTRUMENTS LIST</div>
         </header>
         <table class="print-table">
           <thead>
             <tr>
               <th class="sn-col">SN</th>
-              <th>Client Organization</th>
               <th>Gauge Name</th>
               <th>Identification</th>
               <th>Specification</th>
               <th>Serial</th>
-              <th>Calibration Frequency</th>
+              <th>Cal. Freq.</th>
               <th>Remark</th>
               <th>Make</th>
             </tr>
@@ -115,8 +128,9 @@ export function GaugeListPrintPreview({
   companyAddress = "Address not available",
 }: GaugeListPrintPreviewProps) {
   const previewRows = useMemo(() => rows, [rows])
+  const fileName = useMemo(() => `${companyName}_gauge_list`, [companyName])
 
-  const onPrint = () => {
+  const onPrint = useCallback(() => {
     const iframe = document.createElement("iframe")
     iframe.style.position = "fixed"
     iframe.style.right = "0"
@@ -141,7 +155,42 @@ export function GaugeListPrintPreview({
         document.body.removeChild(iframe)
       }, 500)
     }, 250)
-  }
+  }, [rows, companyAddress, companyName])
+
+  const onDownload = useCallback((format: DownloadFormat) => {
+    const result =
+      format === "pdf"
+        ? exportTablePdf({
+            fileName,
+            title: "Gauges and Instruments List",
+            companyName,
+            companyAddress,
+            rows,
+            columns: GAUGE_LIST_EXPORT_COLUMNS,
+          })
+        : exportSpreadsheetData({
+            fileName,
+            format,
+            sheets: [
+              {
+                name: "Gauge List",
+                rows,
+                columns: GAUGE_LIST_EXPORT_COLUMNS,
+              },
+            ],
+          })
+
+    if (!result.ok) {
+      toast.error(
+        result.reason === "empty"
+          ? "No rows available to export."
+          : "Unable to export because the document columns are not configured."
+      )
+      return
+    }
+
+    toast.success(`${result.format.toUpperCase()} export downloaded successfully.`)
+  }, [companyAddress, companyName, fileName, rows])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,10 +200,10 @@ export function GaugeListPrintPreview({
             <div>
               <DialogTitle className="gl-print-org-name">{companyName}</DialogTitle>
               <div className="gl-print-org-address">{companyAddress}</div>
-              <div className="gl-preview-title">GAUGE LIST</div>
+              <div className="gl-preview-title">GAUGES AND INSTRUMENTS LIST</div>
             </div>
             <div className="gl-print-preview-header-actions">
-              <Button onClick={onPrint}>Print</Button>
+              <PrintPreviewActions disabled={rows.length === 0} onPrint={onPrint} onDownload={onDownload} />
             </div>
           </DialogHeader>
 

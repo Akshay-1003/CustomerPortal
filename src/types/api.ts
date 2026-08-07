@@ -2,6 +2,19 @@ export interface Organization {
   id: string
   name: string
   code?: string
+  address?: {
+    address_line_1?: string
+    address_line_2?: string
+    city?: string
+    state?: string
+    zip_code?: string
+    country?: string
+  } | null
+  contacts?: Array<{
+    name?: string
+    email?: string
+    phone?: string
+  }>
   created_at?: string
   updated_at?: string
 }

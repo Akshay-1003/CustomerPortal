@@ -1,0 +1,101 @@
+.cdr-print-preview-root {
+  display: flex;
+  max-height: 92vh;
+  flex-direction: column;
+  background: #f8fafc;
+}
+
+.cdr-print-preview-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  background: #fff;
+  padding: 20px 24px 16px;
+}
+
+.cdr-print-preview-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.cdr-print-org-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cdr-print-org-address {
+  margin-top: 4px;
+  max-width: 760px;
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.cdr-preview-title {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cdr-print-preview-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.cdr-print-preview-body {
+  overflow: auto;
+  padding: 24px;
+}
+
+.cdr-preview-sheet {
+  min-width: 1120px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 20px;
+  background: #fff;
+  padding: 18px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.08);
+}
+
+.cdr-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.cdr-preview-table th,
+.cdr-preview-table td {
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  padding: 10px 12px;
+  vertical-align: top;
+  text-align: left;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.cdr-preview-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cdr-col-sn {
+  width: 64px;
+}
+
+@media (max-width: 1024px) {
+  .cdr-print-preview-body {
+    padding: 16px;
+  }
+
+  .cdr-preview-sheet {
+    min-width: 980px;
+    padding: 14px;
+  }
+}

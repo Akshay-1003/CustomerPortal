@@ -17,6 +17,7 @@ import { gaugeService } from "@/services/gauge.service"
 import { GaugeListPrintPreview, type GaugeListPrintRow } from "./GaugeListPrintPreview"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 import type { HistoryCardGauge } from "@/types/api"
+import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 
 interface Props {
     gauges: HistoryCardGauge[]
@@ -32,7 +33,7 @@ interface Props {
 
 const GaugeListTableComponent = forwardRef<{
     onOpenPrintPreview: () => void
-}, Props>(function GaugeListTable({
+	}, Props>(function GaugeListTable({
     gauges,
     currentPage,
     setCurrentPage,
@@ -42,17 +43,20 @@ const GaugeListTableComponent = forwardRef<{
     totalPages,
     isLoading = false,
     onGaugeUpdate
-}, ref) {
-    const navigate = useNavigate()
-    const [isUpdating, setIsUpdating] = useState<string | null>(null)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-    const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
+	}, ref) {
+	    const navigate = useNavigate()
+	    const [isUpdating, setIsUpdating] = useState<string | null>(null)
+	    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+	    const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
     
     // Backend pagination - no need for client-side slicing
-    const allSelected = useMemo(() => gauges.length > 0 && selectedIds.size === gauges.length, [gauges.length, selectedIds.size])
-    const someSelected = useMemo(() => selectedIds.size > 0 && !allSelected, [selectedIds.size, allSelected])
-    const selectedRows = useMemo(() => gauges.filter((g) => selectedIds.has(g.id)), [gauges, selectedIds])
-    const printSourceRows = useMemo(() => selectedRows.length > 0 ? selectedRows : gauges, [selectedRows, gauges])
+	    const allSelected = useMemo(() => gauges.length > 0 && selectedIds.size === gauges.length, [gauges.length, selectedIds.size])
+	    const someSelected = useMemo(() => selectedIds.size > 0 && !allSelected, [selectedIds.size, allSelected])
+	    const selectedRows = useMemo(() => gauges.filter((g) => selectedIds.has(g.id)), [gauges, selectedIds])
+	    const printSourceRows = useMemo(() => selectedRows.length > 0 ? selectedRows : gauges, [selectedRows, gauges])
+        const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo({
+            fallbackName: printSourceRows[0]?.client_organization || "Company",
+        })
 
     const printRows = useMemo<GaugeListPrintRow[]>(
         () =>
@@ -171,13 +175,12 @@ const GaugeListTableComponent = forwardRef<{
                                         aria-label="Select all gauge rows"
                                     />
                                 </TableHead>
-                                <TableHead>Serial No</TableHead>
+                                <TableHead>Sr. No.</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Identification Number</TableHead>
                                 <TableHead>Serial Number</TableHead>
                                 <TableHead>Make</TableHead>
                                 <TableHead>Specifications</TableHead>
-                                <TableHead>Least Count</TableHead>
                                 <TableHead>Frequency</TableHead>
                                 <TableHead>Condition</TableHead>
                                 <TableHead>Actions</TableHead>
@@ -226,7 +229,6 @@ const GaugeListTableComponent = forwardRef<{
                                                     {specification}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap">{gauge.least_count || "N/A"}</TableCell>
                                             <TableCell className="whitespace-nowrap">
                                                 {gauge.calibration_frequency
                                                     ? `${gauge.calibration_frequency} ${gauge.calibration_frequency_unit || ""}`
@@ -338,13 +340,13 @@ const GaugeListTableComponent = forwardRef<{
             )}
           
 
-            <GaugeListPrintPreview
-                open={isPrintPreviewOpen}
-                onOpenChange={setIsPrintPreviewOpen}
-                rows={printRows}
-                companyName={printSourceRows[0]?.client_organization || "Company"}
-                companyAddress="151/1, Kalappanna Awade Textile Park, Kolhapur-416121 | calibration@company.com"
-            />
+	            <GaugeListPrintPreview
+	                open={isPrintPreviewOpen}
+	                onOpenChange={setIsPrintPreviewOpen}
+	                rows={printRows}
+	                companyName={organizationName}
+	                companyAddress={organizationAddress}
+	            />
 
         </div>
     )

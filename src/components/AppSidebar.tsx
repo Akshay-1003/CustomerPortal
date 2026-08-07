@@ -1,5 +1,5 @@
 import {
-  ChevronRight, LayoutDashboard, Gauge, List, FileText,
+  ChevronRight, Gauge, List, FileText,
   // Settings, 
   LogOut,
   User,
@@ -51,9 +51,8 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { title: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { title: "Calibration Overview", icon: Activity, href: "/analytics", matchPattern: "/analytics.*" },
-  { title: "Monthly Planning", icon: CalendarDays, href: "/monthly-planning", matchPattern: "/monthly-planning.*" },
+  { title: "Dashboard", icon: Activity, href: "/", matchPattern: "^/$|^/analytics(?:/.*)?$" },
+  { title: "Calibration Overview", icon: CalendarDays, href: "/calibration-overview", matchPattern: "^/calibration-overview(?:/.*)?$|^/monthly-planning(?:/.*)?$" },
   { title: "Gauge Life Prediction", icon: Cpu, href: "/gauge-life-prediction", matchPattern: "/gauge-life-prediction.*" },
   {
     title: "Transactions",
@@ -83,7 +82,7 @@ const menuItems: MenuItem[] = [
     icon: FileBarChart2,
     items: [
       { title: "History Card", icon: FileText, href: "/reports/history-card", matchPattern: "/reports/history-card.*" },
-      { title: "Calibration Due Report", icon: FileText, href: "/reports/calibration-due-report", matchPattern: "/reports/calibration-due-report.*" },
+      { title: "Calibration Planning", icon: FileText, href: "/reports/calibration-due-report", matchPattern: "/reports/calibration-due-report.*" },
     ],
   },
 ]

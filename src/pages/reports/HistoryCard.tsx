@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useGauges } from "@/hooks/useGauges"
+import { useAllGauges } from "@/hooks/useGauges"
 import { Search, RotateCcw, Eye } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, PrinterCheckIcon } from "lucide-react"
@@ -29,6 +29,7 @@ import { formatSpecificationForPrint } from "@/components/reports/helpers/specif
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { HistoryCardPrintPreview, type HistoryCardPrintRow } from "@/components/reports/HistoryCardPrintPreview"
+import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 
 const REMARK_QUICK_FILTERS = [
   { id: "accept", label: "Accept", keywords: ["accept"] },
@@ -128,23 +129,6 @@ function getDueMeta(nextCalibrationDate?: string): DueMeta {
   }
 }
 
-function getDueCellClass(status: DueStatus): string {
-  switch (status) {
-    case "overdue":
-      return "bg-red-50 text-red-700"
-    case "due_today":
-      return "bg-yellow-50 text-yellow-700"
-    case "critical":
-      return "bg-amber-50 text-amber-700"
-    case "due_soon":
-      return "bg-yellow-50 text-yellow-700"
-    case "safe":
-      return "bg-emerald-50 text-emerald-700"
-    default:
-      return "bg-slate-50 text-slate-600"
-  }
-}
-
 function getGaugeRemark(gauge: HistoryCardGauge): string {
   const specRemark = gauge?.specifications?.remark
   if (typeof specRemark === "string" && specRemark.trim()) {
@@ -188,6 +172,7 @@ function getPageNumbers(current: number, total: number) {
 
 export function HistoryCardPage() {
   const navigate = useNavigate()
+  const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo()
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
   const [make, setMake] = useState("all")
@@ -199,9 +184,7 @@ export function HistoryCardPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
 
-  const { data: response, isLoading, isFetching, isError, error } = useGauges(currentPage, itemsPerPage, search)
-  const gauges = response?.data || []
-  const totalItems = response?.total || 0
+  const { data: gauges = [], isLoading, isFetching, isError, error } = useAllGauges()
   const typedGauges = gauges as HistoryCardGauge[]
   const isTableLoading = isLoading || isFetching
 
@@ -227,18 +210,12 @@ export function HistoryCardPage() {
         selectedRemarkFilters.length === 0 ||
         selectedRemarkFilters.some((filter) => normalizedRemark.includes(filter))
 
-      const matchesDueStatus =
-        dueStatusFilter === "all" ||
-        (dueStatusFilter === "due_today" && gauge.next_calibration_date) ||
-        (dueStatusFilter === "overdue" && gauge.next_calibration_date && gauge.next_calibration_date < new Date().toISOString().split('T')[0])
-
       return (
         matchesSearch &&
         matchesStatus &&
         matchesMake &&
         matchesRemarkMode &&
-        matchesRemarkFilters &&
-        matchesDueStatus
+        matchesRemarkFilters
       )
     })
 
@@ -252,7 +229,7 @@ export function HistoryCardPage() {
 
       return dueA.sortValue - dueB.sortValue
     })
-  }, [typedGauges, search, status, make, remarkMode, selectedRemarkFilters, dueStatusFilter])
+  }, [typedGauges, search, status, make, remarkMode, selectedRemarkFilters])
 
   const filtered = useMemo(() => {
     if (dueStatusFilter === "all") {
@@ -261,32 +238,16 @@ export function HistoryCardPage() {
     return baseFiltered.filter((gauge) => getDueMeta(gauge.next_calibration_date).status === dueStatusFilter)
   }, [baseFiltered, dueStatusFilter])
 
-  const statusSummary = useMemo(() => {
-    const summary = {
-      overdue: 0,
-      due_today: 0,
-      critical: 0,
-      due_soon: 0,
-      safe: 0,
-      unknown: 0,
-    }
-
-    baseFiltered.forEach((gauge) => {
-      const due = getDueMeta(gauge.next_calibration_date)
-      summary[due.status] += 1
-    })
-
-    return summary
-  }, [baseFiltered])
-
   useEffect(() => {
     setCurrentPage(1)
   }, [search, status, make, remarkMode, selectedRemarkFilters, itemsPerPage, dueStatusFilter])
 
-  // For backend pagination, the API already returns the correct page data
-  const paginated = filtered
-
+  const totalItems = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
+  const paginated = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    return filtered.slice(startIndex, startIndex + itemsPerPage)
+  }, [filtered, currentPage, itemsPerPage])
   const pages = getPageNumbers(currentPage, totalPages)
 
   const filteredIds = useMemo(() => new Set(paginated.map((g) => g.id)), [paginated])
@@ -356,7 +317,6 @@ export function HistoryCardPage() {
 
   const printRows = useMemo<HistoryCardPrintRow[]>(() => {
     return printSourceRows.map((gauge, index) => {
-      const dueMeta = getDueMeta(gauge.next_calibration_date)
       return {
         serialNo: index + 1,
         gaugeType: gauge.master_gauge || "N/A",
@@ -366,11 +326,8 @@ export function HistoryCardPage() {
         frequency: gauge.calibration_frequency
           ? `${gauge.calibration_frequency} ${gauge.calibration_frequency_unit || ""}`
           : "N/A",
-        dueDate: formatDateDDMMYYYY(gauge.next_calibration_date),
-        dayLeft: dueMeta.label,
-        gaugeLocation: gauge.calibration_location || gauge.calibration_location_type || "N/A",
-        partName: gauge.part_name || "N/A",
-        gauge_condition: gauge.gauge_condition || "-",
+        nextCalibrationDate: formatDateDDMMYYYY(gauge.next_calibration_date),
+        remark: getGaugeRemark(gauge) || "-",
       }
     })
   }, [printSourceRows])
@@ -419,7 +376,7 @@ export function HistoryCardPage() {
         </CardHeader>
 
         <CardContent>
-          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
+          {/* <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
             <Button
               size="sm"
               variant={dueStatusFilter === "overdue" ? "default" : "outline"}
@@ -446,7 +403,7 @@ export function HistoryCardPage() {
               OK: {statusSummary.safe}
             </Button>
 
-          </div>
+          </div> */}
           <div className="flex gap-3 mb-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -492,9 +449,9 @@ export function HistoryCardPage() {
                     <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Freq.</TableHead>
                     <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Make</TableHead>
                     <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Due Date</TableHead>
-                    <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Day Left</TableHead>
-                    <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Location</TableHead>
-                    <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Part Name</TableHead>
+                    {/* <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Day Left</TableHead> */}
+                    {/* <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Location</TableHead> */}
+                    {/* <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Part Name</TableHead> */}
                     <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Remark</TableHead>
                     <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30 text-right">Action</TableHead>
                   </TableRow>
@@ -513,7 +470,6 @@ export function HistoryCardPage() {
                     paginated.map((gauge, index) => {
                       const rowId = (currentPage - 1) * itemsPerPage + index + 1
                       const specification = formatSpecificationForPrint(gauge.specifications, gauge.unit || "mm")
-                      const dueMeta = getDueMeta(gauge.next_calibration_date)
                       return (
                         <TableRow key={gauge.id} className="hover:bg-muted/20">
                           <TableCell className="w-[44px]">
@@ -551,18 +507,18 @@ export function HistoryCardPage() {
                           </TableCell>
                           <TableCell className="whitespace-nowrap">{gauge.make || "N/A"}</TableCell>
                           <TableCell className="whitespace-nowrap">{formatDateDDMMYYYY(gauge.next_calibration_date)}</TableCell>
-                          <TableCell className={`whitespace-nowrap ${getDueCellClass(dueMeta.status)}`}>
+                          {/* <TableCell className={`whitespace-nowrap ${getDueCellClass(dueMeta.status)}`}>
                             <span className="font-medium">{dueMeta.label}</span>
-                          </TableCell>
-                          <TableCell
+                          </TableCell> */}
+                          {/* <TableCell
                             className="whitespace-nowrap"
                             title={gauge.calibration_location || gauge.calibration_location_type || "N/A"}
                           >
                             {gauge.calibration_location || gauge.calibration_location_type || "N/A"}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap" title={gauge.part_name || "N/A"}>
+                          </TableCell> */}
+                          {/* <TableCell className="whitespace-nowrap" title={gauge.part_name || "N/A"}>
                             {gauge.part_name || "N/A"}
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell className="whitespace-nowrap" title={gauge.gauge_condition || "-"}>
                             {gauge.gauge_condition || "-"}
                           </TableCell>
@@ -634,8 +590,8 @@ export function HistoryCardPage() {
         open={isPrintPreviewOpen}
         onOpenChange={setIsPrintPreviewOpen}
         rows={printRows}
-        companyName={printSourceRows[0]?.client_organization || "Company"}
-        companyAddress="151/1, Kalappanna Awade Textile Park, Kolhapur-416121 | calibration@company.com"
+        companyName={organizationName}
+        companyAddress={organizationAddress}
       />
     </div>
   )

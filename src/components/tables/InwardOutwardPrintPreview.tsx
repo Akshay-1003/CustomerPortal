@@ -1,7 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import type { OutwardGauge, Outward } from "@/types/api"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
+import { toast } from "sonner"
+import { PrintPreviewActions } from "@/components/export/PrintPreviewActions"
+import { exportSpreadsheetData, exportTablePdf } from "@/lib/export/export.service"
+import type { DownloadFormat, ExportColumn } from "@/lib/export/types"
 import "./InwardOutwardPrintPreview.css"
 
 type InwardOutwardPrintPreviewProps = {
@@ -12,6 +15,17 @@ type InwardOutwardPrintPreviewProps = {
   gauges: OutwardGauge[]
   selectedOutward: Outward
 }
+
+const INWARD_EXPORT_COLUMNS: ExportColumn<OutwardGauge>[] = [
+  { key: "inward_gauge_lab_id", header: "Lab ID", accessor: (row) => row.inward_gauge_lab_id || "N/A", width: 16, pdfWidth: 16 },
+  { key: "master_gauge_name", header: "Gauge Name", accessor: (row) => row.master_gauge_name || "N/A", width: 24, pdfWidth: 24 },
+  { key: "identification_number", header: "Identification", accessor: (row) => row.identification_number || "N/A", width: 18, pdfWidth: 18 },
+  { key: "specifications", header: "Specifications", accessor: (row) => formatSpecificationForPrint(row.specifications), width: 24, pdfWidth: 24 },
+  { key: "manf_serial_number", header: "Serial", accessor: (row) => row.manf_serial_number || "N/A", width: 16, pdfWidth: 16 },
+  { key: "process", header: "Process", accessor: (row) => row.process || "N/A", width: 14, pdfWidth: 14 },
+  { key: "status", header: "Status", accessor: (row) => row.status || "N/A", width: 14, pdfWidth: 14 },
+  { key: "inward_date", header: "Inward Date", accessor: (row) => formatDate(row.inward_date), width: 14, pdfWidth: 14 },
+]
 
 function escapeHtml(value: string): string {
   return value
@@ -115,6 +129,8 @@ export function InwardOutwardPrintPreview({
   gauges,
   selectedOutward,
 }: InwardOutwardPrintPreviewProps) {
+  const fileName = `${companyName}_inward_gauge_list`
+
   const onPrint = () => {
     const iframe = document.createElement("iframe")
     iframe.style.position = "fixed"
@@ -141,7 +157,42 @@ export function InwardOutwardPrintPreview({
       }, 500)
     }, 250)
   }
-console.log(gauges)
+
+  const onDownload = (format: DownloadFormat) => {
+    const result =
+      format === "pdf"
+        ? exportTablePdf({
+            fileName,
+            title: "Inward Gauge List",
+            companyName,
+            companyAddress,
+            rows: gauges,
+            columns: INWARD_EXPORT_COLUMNS,
+          })
+        : exportSpreadsheetData({
+            fileName,
+            format,
+            sheets: [
+              {
+                name: "Inward Gauges",
+                rows: gauges,
+                columns: INWARD_EXPORT_COLUMNS,
+              },
+            ],
+          })
+
+    if (!result.ok) {
+      toast.error(
+        result.reason === "empty"
+          ? "No rows available to export."
+          : "Unable to export because the document columns are not configured."
+      )
+      return
+    }
+
+    toast.success(`${result.format.toUpperCase()} export downloaded successfully.`)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[96vw] max-w-[96vw] h-[94vh] p-0">
@@ -152,7 +203,7 @@ console.log(gauges)
               <div className="iop-print-org-address">{companyAddress}</div>
               <div className="iop-preview-title">INWARD GAUGE LIST</div>
             </div>
-            <Button onClick={onPrint}>Print</Button>
+            <PrintPreviewActions disabled={gauges.length === 0} onPrint={onPrint} onDownload={onDownload} />
           </DialogHeader>
 
           <div className="iop-print-preview-body">
@@ -196,4 +247,3 @@ console.log(gauges)
     </Dialog>
   )
 }
-

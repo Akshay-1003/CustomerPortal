@@ -13,6 +13,7 @@ import {
 import { DynamicAcceptanceLimitTable } from "./helpers/DynamicAcceptanceLimitTable"
 
 type CalibrationRow = {
+  labId: string
   certificateNo: string
   certificateUrl?: string
   calibrationDate: string
@@ -132,7 +133,8 @@ function toCalibrationRows(history: unknown): CalibrationRow[] {
   return toHistoryArray(history).map((record, index) => {
     const raw = record as GaugeHistory & { certificate_number?: string; certificate_url?: string }
     return {
-      certificateNo: raw.certificate_number || record.inward_gauge_lab_id || record.certificate || `CERT-${index + 1}`,
+      labId: record.inward_gauge_lab_id || `LAB-${index + 1}`,
+      certificateNo: raw.certificate_number || record.certificate || "N/A",
       certificateUrl: raw.certificate_url,
       calibrationDate: formatDate(record.certificate_issue_date || record.date),
       observations: record.notes || record.result || "N/A",
@@ -155,6 +157,7 @@ function estimateLines(text: string, charsPerLine: number): number {
 
 function estimateRowHeight(row: CalibrationRow): number {
   const lines = [
+    estimateLines(row.labId, 18),
     estimateLines(row.certificateNo, 18),
     estimateLines(row.calibrationDate, 12),
     estimateLines(row.observations, 36),
@@ -211,19 +214,31 @@ function renderInfoGrid(items: LabelValue[]) {
 }
 
 function renderCertificateCell(row: CalibrationRow) {
-  if (row.certificateUrl) {
+  return <span className="chr-cell-strong">{row.certificateNo}</span>
+}
+
+function renderLabIdCell(row: CalibrationRow) {
+  if (row.certificateUrl && row.labId !== "N/A") {
     return (
-      <a href={row.certificateUrl} target="_blank" rel="noopener noreferrer" className="chr-cert-tag" title="Open Certificate">
-        {row.certificateNo}
+      <a
+        href={row.certificateUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="chr-link-value"
+        title="Open Certificate"
+      >
+        {row.labId}
       </a>
     )
   }
-  return <span className="chr-cert-tag chr-cert-tag-muted">{row.certificateNo}</span>
+
+  return <span className="chr-cell-strong">{row.labId}</span>
 }
 
 export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryReportProps) {
   const rows = useMemo(() => toCalibrationRows(history), [history])
   const pages = useMemo(() => paginateRows(rows), [rows])
+  const gaugeDetail = gauge as Gauge & { inward_gauge_lab_id?: string }
 
   const specifications = useMemo(
     () => (gauge?.specifications || {}) as Record<string, unknown>,
@@ -250,18 +265,15 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
     preparedBy: readSpec(gauge?.specifications, ["prepared_by"], "Calibration Department"),
     approvedBy: readSpec(gauge?.specifications, ["approved_by"], "Quality Head"),
   }
-
-  const historyCardNo = gauge?.id ? gauge.id.slice(-6).toUpperCase() : "N/A"
   const topInfo: LabelValue[] = [
-    { label: "Code No", value: gauge?.identification_number || "N/A" },
-    { label: "History Card No", value: historyCardNo },
+    { label: "Identification No", value: gauge?.identification_number || "N/A" },
+    { label: "Lab Id", value: gaugeDetail?.inward_gauge_lab_id || "N/A" },
     { label: "Make", value: gauge?.make || "N/A" },
     { label: "Serial No", value: gauge?.manf_serial_number || "N/A" },
-    { label: "Part Name", value: gauge?.part_name || "N/A" },
   ]
 
   const calibrationInfo: LabelValue[] = [
-    { label: "Calibration Agency", value: "NABL Accredited LAB" },
+    { label: "Calibration Agency", value: gauge?.calibration_done_under || "N/A" },
     {
       label: "Frequency",
       value: gauge?.calibration_frequency
@@ -269,12 +281,13 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
         : "N/A",
     },
     { label: "REF. STD. (IF ANY)", value: gauge?.reference_standard || "N/A" },
-    { label: "Last Calibration Date", value: formatDate(gauge?.certificate_issue_date) },
-    { label: "Next Due Date", value: formatDate(gauge?.next_calibration_date) },
+
+    // { label: "Last Calibration Date", value: formatDate(gauge?.certificate_issue_date) },
+    // { label: "Next Due Date", value: formatDate(gauge?.next_calibration_date) },
   ]
 
   const specificationInfoHeader: LabelValue[] = [
-    { label: "Reference Standard / Master Equipment", value: gauge?.master_gauge || "N/A" },
+    { label: "Equipment Name", value: gauge?.master_gauge || "N/A" },
 
   ]
   const specificationInfo: LabelValue[] = [
@@ -282,27 +295,29 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
     { label: "Acceptance Criteria", value: acceptanceCriteria },
   ]
   const onPrint = () => window.print()
-
   const renderTable = (page: ReportPage) => (
     <table className="chr-table">
       <colgroup>
+        <col style={{ width: "14%" }} />
+        <col style={{ width: "12%" }} />
+        <col style={{ width: "16%" }} />
         <col style={{ width: "16%" }} />
         <col style={{ width: "12%" }} />
-        <col style={{ width: "20%" }} />
-        <col style={{ width: "10%" }} />
-        <col style={{ width: "12%" }} />
-        <col style={{ width: "12%" }} />
-        <col style={{ width: "18%" }} />
+        <col style={{ width: "14%" }} />
+        <col style={{ width: "16%" }} />
       </colgroup>
       <thead>
         <tr>
+          <th>Lab Id</th>
           <th>Certificate No</th>
           <th>Calibration Date</th>
           <th>Observations</th>
-          <th>Remark</th>
-          <th>Calibrated By</th>
+          <th>Status</th>
+          {/* <th>Calibrated By</th> */}
           <th>Due Date</th>
-          <th>Maintenance Details</th>
+          {/* <th>Maintenance Details</th> */}
+                    <th>Remark</th>
+
         </tr>
       </thead>
       <tbody>
@@ -314,12 +329,13 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           </tr>
         ) : (
           page.rows.map((row, rowIndex) => (
-            <tr key={`${row.certificateNo}-${rowIndex}`}>
+            <tr key={`${row.labId}-${row.certificateNo}-${rowIndex}`}>
+              <td>{renderLabIdCell(row)}</td>
               <td>{renderCertificateCell(row)}</td>
               <td>{row.calibrationDate}</td>
               <td>{row.observations}</td>
               <td>{row.gauge_condition}</td>
-              <td>{row.calibratedBy}</td>
+              {/* <td>{row.calibratedBy}</td> */}
               <td>{row.dueDate}</td>
               <td>{row.maintenanceDetails}</td>
             </tr>
@@ -482,7 +498,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             display: flex;
             flex-direction: column;
             font-family: Arial, sans-serif;
-            font-size:14px;
+            font-size: 15px;
           }
 
           .chr-header-full {
@@ -501,30 +517,30 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
           .chr-company-head h2 {
             margin: 0;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
           }
 
           .chr-company-head p {
             margin: 2px 0 0;
-            font-size: 11px;
+            font-size: 12px;
           }
 
           .chr-doc-title-inline {
             text-align: right;
-            font-size: 13px;
+            font-size: 15px;
             font-weight: 700;
             white-space: nowrap;
           }
 
           .chr-section {
             margin-bottom: 8px;
-            font-size:12px;
+            font-size: 13px;
           }
 
           .chr-section-title {
             margin: 0 0 6px;
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.04em;
@@ -532,7 +548,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
           .chr-subtitle {
             margin: 0 0 4px;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700;
           }
 
@@ -574,8 +590,8 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
           .chr-info-label,
           .chr-info-value {
-            padding: 4px 6px;
-            font-size: 11px;
+            padding: 6px 8px;
+            font-size: 12px;
             line-height: 1.3;
             display: flex;
             align-items: center;
@@ -603,10 +619,10 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           .chr-table th,
           .chr-table td {
             border: 1px solid #d8dde3;
-            padding: 4px 5px;
+            padding: 6px 8px;
             text-align: left;
             vertical-align: top;
-            font-size: 11px;
+            font-size: 12px;
             line-height: 1.3;
           }
 
@@ -630,29 +646,22 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             flex: 1;
           }
 
-          .chr-cert-tag {
-            display: inline-flex;
-            align-items: center;
-            max-width: 100%;
-            padding: 2px 8px;
-            border-radius: 999px;
-            border: 1px solid #cfd5dc;
-            background: #f5f7fa;
+          .chr-cell-strong {
             color: #111827;
-            text-decoration: none;
-            font-size: 10px;
             font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
           }
 
-          .chr-cert-tag:hover {
-            background: #f1f5f9;
+          .chr-link-value {
+            color: #1d4ed8;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            font-weight: 700;
+            word-break: break-word;
           }
 
-          .chr-cert-tag-muted {
-            cursor: default;
+          .chr-link-value:hover,
+          .chr-link-value:focus-visible {
+            color: #1e40af;
           }
 
           .chr-empty-row {
@@ -666,7 +675,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
           }
 
           .chr-company-compact {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 700;
           }
 
@@ -674,7 +683,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             margin: 4px 0;
             padding: 4px 0;
             text-align: center;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 700;
             border-top: 1px solid #d1d5db;
             border-bottom: 1px solid #d1d5db;
@@ -684,7 +693,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             display: flex;
             flex-wrap: wrap;
             gap: 8px 14px;
-            font-size: 10px;
+            font-size: 11px;
           }
 
           .chr-footer {
@@ -695,7 +704,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             display: flex;
             justify-content: space-between;
             gap: 10px;
-            font-size: 10px;
+            font-size: 11px;
           }
 
           .chr-footer-left {

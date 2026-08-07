@@ -1,14 +1,15 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { RefreshCw, Plus, AlertCircle, Printer } from "lucide-react"
-import { useGauges } from "@/hooks/useGauges"
+import { useAllGauges } from "@/hooks/useGauges"
 import { GaugeListTable } from "@/components/tables/GaugeListTable"
 import { useDebouncedValue } from "@/hooks/useDebounce"
 import { useRef } from "react"
 import { authService } from "@/services/auth.service"
+import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 
 const ITEMS_PER_PAGE = 10
 
@@ -26,40 +27,39 @@ export default function GaugeListPage() {
   const debouncedSearch = useDebouncedValue(searchQuery, 300)
   const tableRef = useRef<{ onOpenPrintPreview: () => void }>(null)
 
-  const { data: gaugesResponse, isLoading, isFetching, isError, error, refetch } = useGauges(
-    currentPage, 
-    itemsPerPage, 
-    debouncedSearch
-  )
-  
-  // Debug logging to understand API response structure
-  console.log('API Response:', gaugesResponse)
-  
-  // API returns data directly with pagination info, not nested in data.data
-  const gauges = Array.isArray(gaugesResponse?.data) ? gaugesResponse.data : []
-  const totalItems = gaugesResponse?.total ?? 0
-  const limit = gaugesResponse?.limit ?? ITEMS_PER_PAGE
-  
-  // Calculate totalPages since API doesn't provide it
-  const totalPages = totalItems > 0 && limit > 0 ? Math.ceil(totalItems / limit) : 0
-  
-  // Ensure gauges is always an array
-  const safeGauges = Array.isArray(gauges) ? gauges : []
-  
-  // Don't render pagination until we have valid data
-  const shouldShowPagination = totalPages > 0 && !isLoading
-  
-  // Debug pagination values
-  console.log('Pagination Values:', { 
-    currentPage, 
-    totalItems, 
-    totalPages, 
-    gaugesLength: gauges.length,
-    shouldShowPagination,
-    isLoading,
-    gaugesResponse 
-  })
-  
+  const { data: allGauges = [], isLoading, isFetching, isError, error, refetch } = useAllGauges()
+
+  const filteredGauges = useMemo(() => {
+    const normalizedSearch = debouncedSearch.trim().toLowerCase()
+
+    if (!normalizedSearch) {
+      return allGauges
+    }
+
+    return allGauges.filter((gauge) => {
+      const searchableText = [
+        gauge.master_gauge,
+        gauge.identification_number,
+        gauge.manf_serial_number,
+        gauge.make,
+        formatSpecificationForPrint(gauge.specifications, gauge.unit || "mm"),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+
+      return searchableText.includes(normalizedSearch)
+    })
+  }, [allGauges, debouncedSearch])
+
+  const totalItems = filteredGauges.length
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / itemsPerPage) : 0
+
+  const paginatedGauges = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    return filteredGauges.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredGauges, currentPage, itemsPerPage])
+
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
     setCurrentPage(1) // Reset to first page when searching
@@ -146,7 +146,7 @@ export default function GaugeListPage() {
       {/* Table */}
       <GaugeListTable
         ref={tableRef}
-        gauges={safeGauges}
+        gauges={paginatedGauges}
         currentPage={currentPage}
         setCurrentPage={handlePageChange}
         itemsPerPage={itemsPerPage}

@@ -105,7 +105,7 @@ export function MonthlyCalibrationDashboard() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                  Monthly Calibration Overview
+                  Calibration Overview
                 </h1>
                 <Badge variant={plannedOnly ? "primary" : "outline"}>
                   {plannedOnly ? "Plan View" : "Status View"}
