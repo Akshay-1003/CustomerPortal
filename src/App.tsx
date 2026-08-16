@@ -26,6 +26,7 @@ const HistoryCardDetailPage = lazy(() => import("./pages/reports/HistoryCardDeta
 const CalibrationDueReportPage = lazy(() => import("./pages/reports/CalibrationDueReport").then(m => ({ default: m.CalibrationDueReportPage })))
 const GaugeMasterPage = lazy(() => import("./pages/GaugeMaster"))
 const FormatNumberPage = lazy(() => import("./pages/FormatNumber"))
+const NotificationsPage = lazy(() => import("./pages/Notifications").then(m => ({ default: m.Notifications })))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -88,6 +89,7 @@ function AppContent() {
         <Route path="monthly-planning" element={<Navigate to="/calibration-overview" replace />} />
         <Route path="gauge-life-prediction" element={<Suspense fallback={<PageLoader />}><GaugeLifePredictionPage /></Suspense>} />
         <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
+        <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
         <Route path="transactions/inward" element={<Suspense fallback={<PageLoader />}><InwardPage /></Suspense>} />
         <Route path="transactions/outward" element={<Suspense fallback={<PageLoader />}><OutwardPage /></Suspense>} />
       </Route>

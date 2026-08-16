@@ -8,6 +8,7 @@ import { authService } from "@/services/auth.service"
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
 import { RouteTransitionIndicator } from "@/components/RouteTransitionIndicator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { CustomerNotificationBell } from "@/components/notifications/CustomerNotificationBell"
 
 
 export function DashboardLayout() {
@@ -35,6 +36,7 @@ export function DashboardLayout() {
            
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <CustomerNotificationBell />
             <PwaInstallPrompt />
           </div>
         </header>
