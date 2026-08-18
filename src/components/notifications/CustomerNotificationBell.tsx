@@ -11,13 +11,21 @@ import {
   useCustomerNotifications,
   useMarkCustomerNotificationRead,
 } from "@/hooks/useNotifications";
+import { useAuth } from "@/hooks/useAuth";
+import { canEditCustomerModule } from "@/lib/permissions";
 import type { NotificationEvent } from "@/types/notifications";
 
 export function CustomerNotificationBell() {
+  const { user } = useAuth();
   const notificationsQuery = useCustomerNotifications({ limit: 25 });
   const markRead = useMarkCustomerNotificationRead();
   const notifications = notificationsQuery.data?.notifications ?? [];
   const unreadCount = notifications.filter((item) => !item.read_by_customer).length;
+  const canUpdateNotifications = canEditCustomerModule(
+    user?.user,
+    "customer_notifications",
+    user?.roles
+  );
 
   return (
     <DropdownMenu>
@@ -62,6 +70,7 @@ export function CustomerNotificationBell() {
                 <NotificationPreview
                   key={notification.id}
                   notification={notification}
+                  canMarkRead={canUpdateNotifications}
                   onMarkRead={() =>
                     markRead.mutate({
                       notificationId: notification.id,
@@ -80,9 +89,11 @@ export function CustomerNotificationBell() {
 
 function NotificationPreview({
   notification,
+  canMarkRead,
   onMarkRead,
 }: {
   notification: NotificationEvent;
+  canMarkRead: boolean;
   onMarkRead: () => void;
 }) {
   return (
@@ -106,7 +117,7 @@ function NotificationPreview({
             </p>
           </div>
           <CustomerNotificationActions notification={notification} />
-          {!notification.read_by_customer ? (
+          {!notification.read_by_customer && canMarkRead ? (
             <Button variant="ghost" size="sm" className="h-7 px-2" onClick={onMarkRead}>
               <CheckCheck className="h-3.5 w-3.5" />
               Mark read
@@ -126,4 +137,3 @@ function formatDateTime(value?: string | null) {
     timeStyle: "short",
   }).format(new Date(value));
 }
-

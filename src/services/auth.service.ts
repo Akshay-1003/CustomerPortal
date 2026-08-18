@@ -79,10 +79,20 @@ export const authService = {
     }
 
     // ✅ Persist auth context
-    Cookies.set('auth', JSON.stringify(authContext), { expires: 7 })
-    Cookies.set('organization_id', decoded.org_id, { expires: 7 })
+    this.setAuthContext(authContext)
 
     return response
+  },
+
+  async getUserById(userId: string): Promise<User> {
+    return apiService.get<User>(`user/${userId}`, {
+      withCredentials: true,
+    })
+  },
+
+  setAuthContext(authContext: AuthContext) {
+    Cookies.set('auth', JSON.stringify(authContext), { expires: 7 })
+    Cookies.set('organization_id', authContext.organization_id, { expires: 7 })
   },
 
   /* -------- LOGOUT -------- */

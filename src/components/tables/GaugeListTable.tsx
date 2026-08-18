@@ -29,6 +29,7 @@ interface Props {
     totalPages: number
     isLoading?: boolean
     onGaugeUpdate?: () => void
+    canManageGauges?: boolean
 }
 
 const GaugeListTableComponent = forwardRef<{
@@ -42,7 +43,8 @@ const GaugeListTableComponent = forwardRef<{
     totalItems,
     totalPages,
     isLoading = false,
-    onGaugeUpdate
+    onGaugeUpdate,
+    canManageGauges = false
 	}, ref) {
 	    const navigate = useNavigate()
 	    const [isUpdating, setIsUpdating] = useState<string | null>(null)
@@ -249,15 +251,17 @@ const GaugeListTableComponent = forwardRef<{
                                                     >
                                                         <FileText className="h-3 w-3" />
                                                     </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300 px-2 py-1 h-7 text-xs"
-                                                        onClick={() => handleMarkForOutward(gauge.id)}
-                                                        disabled={isUpdating === gauge.id}
-                                                    >
-                                                        <ArrowLeft className="h-3 w-3" />
-                                                    </Button>
+                                                    {canManageGauges ? (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300 px-2 py-1 h-7 text-xs"
+                                                            onClick={() => handleMarkForOutward(gauge.id)}
+                                                            disabled={isUpdating === gauge.id}
+                                                        >
+                                                            <ArrowLeft className="h-3 w-3" />
+                                                        </Button>
+                                                    ) : null}
                                                 </div>
                                             </TableCell>
                                         </TableRow>

@@ -10,6 +10,8 @@ import { useDebouncedValue } from "@/hooks/useDebounce"
 import { useRef } from "react"
 import { authService } from "@/services/auth.service"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
+import { useAuth } from "@/hooks/useAuth"
+import { canEditCustomerModule } from "@/lib/permissions"
 
 const ITEMS_PER_PAGE = 10
 
@@ -20,7 +22,13 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export default function GaugeListPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const organizationId = authService.getOrganizationId()
+  const canManageGauges = canEditCustomerModule(
+    user?.user,
+    "customer_gauge_management",
+    user?.roles
+  )
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE)
   const [searchQuery, setSearchQuery] = useState("")
@@ -112,18 +120,20 @@ export default function GaugeListPage() {
             <Printer className="mr-2 h-4 w-4" />
             Print List
           </Button>
-          <Button
-            onClick={() =>
-              navigate(
-                organizationId
-                  ? `/gauge-list/create?organizationId=${encodeURIComponent(organizationId)}`
-                  : "/gauge-list/create"
-              )
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Existing Gauge
-          </Button>
+          {canManageGauges ? (
+            <Button
+              onClick={() =>
+                navigate(
+                  organizationId
+                    ? `/gauge-list/create?organizationId=${encodeURIComponent(organizationId)}`
+                    : "/gauge-list/create"
+                )
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Existing Gauge
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -155,6 +165,7 @@ export default function GaugeListPage() {
         totalPages={totalPages}
         isLoading={isLoading || isFetching}
         onGaugeUpdate={refetch}
+        canManageGauges={canManageGauges}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-import { createContext, useState, type ReactNode } from 'react'
+import { createContext, useEffect, useState, type ReactNode } from 'react'
 import { authService } from '@/services/auth.service'
 import type { LoginRequest, User } from '@/types/api'
 
@@ -48,7 +48,42 @@ function getInitialUser(): LoginUser | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LoginUser | null>(() => getInitialUser())
-  const isLoading = false
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const currentAuth = authService.getAuthContext()
+    if (!currentAuth) return
+
+    let isMounted = true
+    setIsLoading(true)
+
+    authService
+      .getUserById(currentAuth.id)
+      .then((freshUser) => {
+        if (!isMounted) return
+
+        const nextAuth = {
+          ...currentAuth,
+          organization_id: freshUser.organization_id || currentAuth.organization_id,
+          user: freshUser,
+        }
+
+        authService.setAuthContext(nextAuth)
+        setUser(nextAuth)
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to refresh customer permissions:', error)
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   /* -------- LOGIN -------- */
 

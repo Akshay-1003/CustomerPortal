@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import { lazy, Suspense } from "react"
+import { lazy, Suspense, type ReactNode } from "react"
 import { DashboardLayout } from "./components/DashboardLayout"
 import { Login } from "./pages/Login"
 import { ProtectedRoute } from "./components/ProtectedRoute"
@@ -9,6 +9,8 @@ import { Skeleton } from "./components/ui/skeleton"
 import { Card, CardContent, CardHeader } from "./components/ui/card"
 import { Spinner } from "./components/ui/spinner"
 import { NavigationFeedbackProvider } from "./contexts/NavigationFeedbackContext"
+import { RequireCustomerPermission } from "./components/RequireCustomerPermission"
+import type { CustomerPermissionModule, PermissionAction } from "./types/api"
 
 // Lazy load page components for better code splitting
 const GaugeListPage = lazy(() => import("./pages/GaugeList"))
@@ -51,6 +53,16 @@ const PageLoader = () => (
   </Card>
 )
 
+const guardedPage = (
+  module: CustomerPermissionModule,
+  element: ReactNode,
+  action: PermissionAction = "view"
+) => (
+  <RequireCustomerPermission module={module} action={action}>
+    <Suspense fallback={<PageLoader />}>{element}</Suspense>
+  </RequireCustomerPermission>
+)
+
 function AppContent() {
   usePageTitle()
   const { isAuthenticated } = useAuth()
@@ -72,26 +84,26 @@ function AppContent() {
           </ProtectedRoute>
         }   
       >
-        <Route index element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
-        <Route path="gauge-list" element={<Suspense fallback={<PageLoader />}><GaugeListPage /></Suspense>} />
-        <Route path="gauge-list/create" element={<Suspense fallback={<PageLoader />}><GaugeMasterPage /></Suspense>} />
-        <Route path="gauge-management/format-numbers" element={<Suspense fallback={<PageLoader />}><FormatNumberPage /></Suspense>} />
-        <Route path="gauge/:id" element={<Suspense fallback={<PageLoader />}><GaugeDetail /></Suspense>} />
-        <Route path="gauge-list/history/:id" element={<Suspense fallback={<PageLoader />}><HistoryCardDetailPage /></Suspense>} />
-        <Route path="history" element={<Suspense fallback={<PageLoader />}><History /></Suspense>} />
-        <Route path="reports/history-card" element={<Suspense fallback={<PageLoader />}><HistoryCardPage /></Suspense>} />
-        <Route path="reports/history-card/:id" element={<Suspense fallback={<PageLoader />}><HistoryCardDetailPage /></Suspense>} />
-        <Route path="reports/calibration-due-report" element={<Suspense fallback={<PageLoader />}><CalibrationDueReportPage /></Suspense>} />
-        <Route path="calibration-certificates" element={<Suspense fallback={<PageLoader />}><CalibrationCertificates /></Suspense>} />
+        <Route index element={guardedPage("customer_dashboard", <Analytics />)} />
+        <Route path="gauge-list" element={guardedPage("customer_gauge_management", <GaugeListPage />)} />
+        <Route path="gauge-list/create" element={guardedPage("customer_gauge_management", <GaugeMasterPage />, "edit")} />
+        <Route path="gauge-management/format-numbers" element={guardedPage("customer_gauge_management", <FormatNumberPage />, "edit")} />
+        <Route path="gauge/:id" element={guardedPage("customer_gauge_management", <GaugeDetail />)} />
+        <Route path="gauge-list/history/:id" element={guardedPage("customer_reports", <HistoryCardDetailPage />)} />
+        <Route path="history" element={guardedPage("customer_reports", <History />)} />
+        <Route path="reports/history-card" element={guardedPage("customer_reports", <HistoryCardPage />)} />
+        <Route path="reports/history-card/:id" element={guardedPage("customer_reports", <HistoryCardDetailPage />)} />
+        <Route path="reports/calibration-due-report" element={guardedPage("customer_reports", <CalibrationDueReportPage />)} />
+        <Route path="calibration-certificates" element={guardedPage("customer_calibration", <CalibrationCertificates />)} />
         <Route path="analytics" element={<Navigate to="/" replace />} />
         <Route path="dashboard" element={<Navigate to="/" replace />} />
-        <Route path="calibration-overview" element={<Suspense fallback={<PageLoader />}><MonthlyPlanningPage /></Suspense>} />
+        <Route path="calibration-overview" element={guardedPage("customer_calibration", <MonthlyPlanningPage />)} />
         <Route path="monthly-planning" element={<Navigate to="/calibration-overview" replace />} />
-        <Route path="gauge-life-prediction" element={<Suspense fallback={<PageLoader />}><GaugeLifePredictionPage /></Suspense>} />
-        <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
-        <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
-        <Route path="transactions/inward" element={<Suspense fallback={<PageLoader />}><InwardPage /></Suspense>} />
-        <Route path="transactions/outward" element={<Suspense fallback={<PageLoader />}><OutwardPage /></Suspense>} />
+        <Route path="gauge-life-prediction" element={guardedPage("customer_gauge_life_prediction", <GaugeLifePredictionPage />)} />
+        <Route path="settings" element={guardedPage("customer_settings", <Settings />)} />
+        <Route path="notifications" element={guardedPage("customer_notifications", <NotificationsPage />)} />
+        <Route path="transactions/inward" element={guardedPage("customer_transactions", <InwardPage />)} />
+        <Route path="transactions/outward" element={guardedPage("customer_transactions", <OutwardPage />)} />
       </Route>
 
       {/* Catch all - redirect to home */}

@@ -226,6 +226,29 @@ export interface OutwardGaugesResponse {
   outward_gauges: OutwardGauge[]
 }
 
+export type PermissionAction = "view" | "edit"
+
+export type CustomerPermissionModule =
+  | "customer_dashboard"
+  | "customer_calibration"
+  | "customer_gauge_life_prediction"
+  | "customer_transactions"
+  | "customer_gauge_management"
+  | "customer_reports"
+  | "customer_notifications"
+  | "customer_settings"
+
+export type CustomerPermissionMap = Partial<Record<CustomerPermissionModule, PermissionAction[]>> & {
+  [module: string]: PermissionAction[] | undefined
+}
+
+export interface UserPermissionScope {
+  permissions?: CustomerPermissionMap | null
+  scope?: string | null
+  organization_id?: string | null
+  lab_id?: string | null
+}
+
 export interface User {
   id: string
   username: string
@@ -234,8 +257,19 @@ export interface User {
   last_name: string
   organization_id: string
   lab_id: string
-  role: "org_admin" | "org_user" | "org_viewer"
+  role:
+    | "super_admin"
+    | "superadmin"
+    | "org_admin"
+    | "org_manager"
+    | "org_user"
+    | "org_viewer"
+    | "lab_admin"
+    | "lab_manager"
+    | "lab_viewer"
+    | "lab_engineer"
   password: string
   phone: string
   department: string
+  permissions?: UserPermissionScope | null
 }

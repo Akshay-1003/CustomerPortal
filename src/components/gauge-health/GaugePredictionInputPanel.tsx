@@ -37,6 +37,7 @@ interface GaugePredictionInputPanelProps {
   onResetDraft: () => void
   onSubmit: (values: GaugeLifePredictionFormValues) => void
   onSubmitInvalid: () => void
+  canRunPrediction?: boolean
 }
 
 function nextHistoryRow(previousYear?: number): GaugeHistoryObservation {
@@ -55,17 +56,20 @@ export function GaugePredictionInputPanel({
   onResetDraft,
   onSubmit,
   onSubmitInvalid,
+  canRunPrediction = true,
 }: GaugePredictionInputPanelProps) {
   const historyErrors = form.formState.errors.history
   const selectedGaugeType = form.watch("gauge_type")
   const selectedWearDirection = form.watch("wear_direction")
   const wearDirectionPreset = getGaugeTypeWearDirectionPreset(selectedGaugeType)
   const isWearDirectionPresetLocked = wearDirectionPreset !== null && selectedGaugeType !== "Snap Gauge"
+  const isReadOnly = !canRunPrediction
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit, onSubmitInvalid)}>
-        <Card className="border-border/70 shadow-sm">
+        <fieldset disabled={isReadOnly} className="contents">
+          <Card className="border-border/70 shadow-sm">
           <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -382,7 +386,8 @@ export function GaugePredictionInputPanel({
               </p>
             </motion.div>
           </CardContent>
-        </Card>
+          </Card>
+        </fieldset>
       </form>
     </Form>
   )

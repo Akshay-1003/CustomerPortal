@@ -9,11 +9,15 @@ import { PwaInstallPrompt } from "@/components/PwaInstallPrompt"
 import { RouteTransitionIndicator } from "@/components/RouteTransitionIndicator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CustomerNotificationBell } from "@/components/notifications/CustomerNotificationBell"
+import { useAuth } from "@/hooks/useAuth"
+import { canViewCustomerModule } from "@/lib/permissions"
 
 
 export function DashboardLayout() {
   const organizationId = authService.getOrganizationId()
   const { data: organization, isLoading: isOrganizationLoading } = useOrganizationById(organizationId as string)
+  const { user } = useAuth()
+  const canViewNotifications = canViewCustomerModule(user?.user, "customer_notifications", user?.roles)
 
   return (
     <SidebarProvider className="w-full max-w-full overflow-x-hidden">
@@ -36,7 +40,7 @@ export function DashboardLayout() {
            
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <CustomerNotificationBell />
+            {canViewNotifications ? <CustomerNotificationBell /> : null}
             <PwaInstallPrompt />
           </div>
         </header>

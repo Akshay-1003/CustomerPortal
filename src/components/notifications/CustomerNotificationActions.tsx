@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRespondToNotification } from "@/hooks/useNotifications";
+import { useAuth } from "@/hooks/useAuth";
+import { canEditCustomerModule } from "@/lib/permissions";
 import type { NotificationEvent } from "@/types/notifications";
 
 export function CustomerNotificationActions({
@@ -11,9 +13,16 @@ export function CustomerNotificationActions({
   notification: NotificationEvent;
   onActionComplete?: () => void;
 }) {
+  const { user } = useAuth();
   const respondToNotification = useRespondToNotification();
+  const canSubmitResponse = canEditCustomerModule(
+    user?.user,
+    "customer_notifications",
+    user?.roles
+  );
   const canRespond =
     notification.requires_customer_response &&
+    canSubmitResponse &&
     (notification.response_status === "pending" || notification.response_status === "none");
   const actionUrl = notification.action_url || "/reports/calibration-due-report";
 
@@ -72,4 +81,3 @@ export function CustomerNotificationActions({
     </div>
   );
 }
-

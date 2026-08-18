@@ -36,8 +36,15 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { useNavigationFeedback } from "@/hooks/useNavigationFeedback"
+import { canViewCustomerModule, hasCustomerPermission } from "@/lib/permissions"
+import type { CustomerPermissionModule, PermissionAction } from "@/types/api"
+
+interface MenuPermission {
+  module: CustomerPermissionModule
+  action?: PermissionAction
+}
 
 interface MenuItem {
   title: string
@@ -45,35 +52,39 @@ interface MenuItem {
   href?: string
   matchPattern?: string
   disabled?: boolean
+  permission?: MenuPermission
   items?: MenuItem[]
 }
 
 const menuItems: MenuItem[] = [
-  { title: "Dashboard", icon: Activity, href: "/", matchPattern: "^/$|^/analytics(?:/.*)?$" },
-  { title: "Calibration Overview", icon: CalendarDays, href: "/calibration-overview", matchPattern: "^/calibration-overview(?:/.*)?$|^/monthly-planning(?:/.*)?$" },
-  { title: "Gauge Life Prediction", icon: Cpu, href: "/gauge-life-prediction", matchPattern: "/gauge-life-prediction.*" },
+  { title: "Dashboard", icon: Activity, href: "/", matchPattern: "^/$|^/analytics(?:/.*)?$", permission: { module: "customer_dashboard" } },
+  { title: "Calibration Overview", icon: CalendarDays, href: "/calibration-overview", matchPattern: "^/calibration-overview(?:/.*)?$|^/monthly-planning(?:/.*)?$", permission: { module: "customer_calibration" } },
+  { title: "Gauge Life Prediction", icon: Cpu, href: "/gauge-life-prediction", matchPattern: "/gauge-life-prediction.*", permission: { module: "customer_gauge_life_prediction" } },
   {
     title: "Transactions",
     icon: Package,
+    permission: { module: "customer_transactions" },
     items: [
-      { title: "Sent For Calibration", icon: ArrowRight, href: "/transactions/inward", matchPattern: "/transactions/inward.*" },
-      { title: "Received from Calibration", icon: ArrowLeft, href: "/transactions/outward", matchPattern: "/transactions/outward.*" },
+      { title: "Sent For Calibration", icon: ArrowRight, href: "/transactions/inward", matchPattern: "/transactions/inward.*", permission: { module: "customer_transactions" } },
+      { title: "Received from Calibration", icon: ArrowLeft, href: "/transactions/outward", matchPattern: "/transactions/outward.*", permission: { module: "customer_transactions" } },
     ],
   },
   {
     title: "Gauge Management",
     icon: Gauge,
+    permission: { module: "customer_gauge_management" },
     items: [
-      { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list.*" },
-      { title: "Format Numbers", icon: FileText, href: "/gauge-management/format-numbers", matchPattern: "/gauge-management/format-numbers.*" },
+      { title: "Gauge List", icon: List, href: "/gauge-list", matchPattern: "/gauge-list.*", permission: { module: "customer_gauge_management" } },
+      { title: "Format Numbers", icon: FileText, href: "/gauge-management/format-numbers", matchPattern: "/gauge-management/format-numbers.*", permission: { module: "customer_gauge_management", action: "edit" } },
     ],
   },
   {
     title: "Reports",
     icon: FileBarChart2,
+    permission: { module: "customer_reports" },
     items: [
-      { title: "History Card", icon: FileText, href: "/reports/history-card", matchPattern: "/reports/history-card.*" },
-      { title: "Calibration Planning", icon: FileText, href: "/reports/calibration-due-report", matchPattern: "/reports/calibration-due-report.*" },
+      { title: "History Card", icon: FileText, href: "/reports/history-card", matchPattern: "/reports/history-card.*", permission: { module: "customer_reports" } },
+      { title: "Calibration Planning", icon: FileText, href: "/reports/calibration-due-report", matchPattern: "/reports/calibration-due-report.*", permission: { module: "customer_reports" } },
     ],
   },
 ]
@@ -84,6 +95,39 @@ export function AppSidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { startNavigation } = useNavigationFeedback()
+  const canAccessItem = useCallback(
+    (item: MenuItem) => {
+      if (!item.permission) return true
+
+      return hasCustomerPermission(
+        user?.user,
+        item.permission.module,
+        item.permission.action ?? "view",
+        user?.roles
+      )
+    },
+    [user]
+  )
+  const visibleMenuItems = useMemo(
+    () =>
+      menuItems.reduce<MenuItem[]>((accumulator, item) => {
+        if (item.items) {
+          const visibleChildren = item.items.filter(canAccessItem)
+          if (visibleChildren.length > 0 && canAccessItem(item)) {
+            accumulator.push({ ...item, items: visibleChildren })
+          }
+          return accumulator
+        }
+
+        if (canAccessItem(item)) {
+          accumulator.push(item)
+        }
+
+        return accumulator
+      }, []),
+    [canAccessItem]
+  )
+  const canViewSettings = canViewCustomerModule(user?.user, "customer_settings", user?.roles)
   const matchesPath = useCallback(
     (path?: string, matchPattern?: string) => {
       if (!path && !matchPattern) return false
@@ -102,7 +146,7 @@ export function AppSidebar() {
     [location.pathname]
   )
 
-  const isMainMenuActive = (item: typeof menuItems[0]) => {
+  const isMainMenuActive = (item: MenuItem) => {
     if (item.href) {
       return matchesPath(item.href, item.matchPattern)
     }
@@ -136,7 +180,7 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {menuItems.map((item) => {
+              {visibleMenuItems.map((item) => {
                 const isActiveMenu = item.href ? matchesPath(item.href, item.matchPattern) : false
 
                 return item.items ? (
@@ -241,16 +285,18 @@ export function AppSidebar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
 
-              <DropdownMenuItem
-                className=""
-                onClick={() => {
-                  startNavigation("/settings")
-                  navigate("/settings")
-                }}
-              >
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
+              {canViewSettings ? (
+                <DropdownMenuItem
+                  className=""
+                  onClick={() => {
+                    startNavigation("/settings")
+                    navigate("/settings")
+                  }}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() => {
                   startNavigation("/login")

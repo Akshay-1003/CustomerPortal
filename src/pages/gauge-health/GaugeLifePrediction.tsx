@@ -16,6 +16,8 @@ import { GaugePredictionInputPanel } from "@/components/gauge-health/GaugePredic
 import { HealthDonutChart } from "@/components/gauge-health/HealthDonutChart"
 import { IndustrialHeroCard } from "@/components/gauge-health/IndustrialHeroCard"
 import { WearTrendChart } from "@/components/gauge-health/WearTrendChart"
+import { useAuth } from "@/hooks/useAuth"
+import { canEditCustomerModule } from "@/lib/permissions"
 
 function getFirstErrorMessage(errors: FieldErrors<GaugeLifePredictionFormValues>): string | null {
   const walk = (value: unknown): string | null => {
@@ -48,6 +50,7 @@ function getFirstErrorMessage(errors: FieldErrors<GaugeLifePredictionFormValues>
 }
 
 export function GaugeLifePredictionPage() {
+  const { user } = useAuth()
   const [simulatedValues, setSimulatedValues] = useState<GaugeLifePredictionFormValues>(
     gaugeLifePredictionDemoDefaults
   )
@@ -76,6 +79,11 @@ export function GaugeLifePredictionPage() {
   )
 
   const draftHasErrors = !form.formState.isValid
+  const canRunPrediction = canEditCustomerModule(
+    user?.user,
+    "customer_gauge_life_prediction",
+    user?.roles
+  )
 
   const handleRunPrediction = (values: GaugeLifePredictionFormValues) => {
     setSimulatedValues(values)
@@ -186,6 +194,7 @@ export function GaugeLifePredictionPage() {
         onResetDraft={handleResetDraft}
         onSubmit={handleRunPrediction}
         onSubmitInvalid={handlePredictionSubmitInvalid}
+        canRunPrediction={canRunPrediction}
       />
 
       <GaugeHealthKpiGrid metrics={metrics} />
