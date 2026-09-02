@@ -26,6 +26,7 @@ const OutwardPage = lazy(() => import("./pages/transactions/OutwardPage"))
 const HistoryCardPage = lazy(() => import("./pages/reports/HistoryCard").then(m => ({ default: m.HistoryCardPage })))
 const HistoryCardDetailPage = lazy(() => import("./pages/reports/HistoryCardDetail").then(m => ({ default: m.HistoryCardDetailPage })))
 const CalibrationDueReportPage = lazy(() => import("./pages/reports/CalibrationDueReport").then(m => ({ default: m.CalibrationDueReportPage })))
+const CalibrationPlanningMonthDetailsPage = lazy(() => import("./pages/reports/CalibrationPlanningMonthDetails").then(m => ({ default: m.CalibrationPlanningMonthDetailsPage })))
 const GaugeMasterPage = lazy(() => import("./pages/GaugeMaster"))
 const FormatNumberPage = lazy(() => import("./pages/FormatNumber"))
 const NotificationsPage = lazy(() => import("./pages/Notifications").then(m => ({ default: m.Notifications })))
@@ -94,6 +95,7 @@ function AppContent() {
         <Route path="reports/history-card" element={guardedPage("customer_reports", <HistoryCardPage />)} />
         <Route path="reports/history-card/:id" element={guardedPage("customer_reports", <HistoryCardDetailPage />)} />
         <Route path="reports/calibration-due-report" element={guardedPage("customer_reports", <CalibrationDueReportPage />)} />
+        <Route path="reports/calibration-due-report/:year/:month" element={guardedPage("customer_reports", <CalibrationPlanningMonthDetailsPage />)} />
         <Route path="calibration-certificates" element={guardedPage("customer_calibration", <CalibrationCertificates />)} />
         <Route path="analytics" element={<Navigate to="/" replace />} />
         <Route path="dashboard" element={<Navigate to="/" replace />} />

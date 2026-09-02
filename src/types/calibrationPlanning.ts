@@ -32,8 +32,12 @@ export type CalibrationPlanningDetail = {
   calibration_frequency_unit: string
   frequency_label: string
   last_calibration_date: string
+  last_certificate_no?: string | null
+  last_certificate_url?: string | null
   due_date: string
   completed_date?: string | null
+  completion_certificate_no?: string | null
+  completion_certificate_url?: string | null
   days_remaining?: number | null
   status: CalibrationPlanningStatus
 }

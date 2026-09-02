@@ -1,78 +1,91 @@
 import { useMemo, useState } from "react"
-import { AlertTriangle, CalendarDays, CheckCircle2, Clock3, Download, RefreshCw } from "lucide-react"
-import { toast } from "sonner"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useNavigate } from "react-router-dom"
 import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Download,
+  RefreshCw,
+} from "lucide-react"
+import { toast } from "sonner"
+import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Chip,
+  Progress,
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { CalibrationPlanningDetailDialog } from "@/components/reports/CalibrationPlanningDetailDialog"
+  Spinner,
+} from "@heroui/react"
 import {
   CalibrationDueReportPrintPreview,
   type CalibrationDueReportPrintRow,
 } from "@/components/reports/CalibrationDueReportPrintPreview"
 import { useCalibrationPlanningOverview } from "@/hooks/useCalibrationPlanning"
+import {
+  CALIBRATION_MONTHS,
+  toCalibrationPlanningPrintRows,
+} from "@/lib/calibrationPlanningReport"
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { calibrationPlanningService } from "@/services/calibrationPlanning.service"
-import type {
-  CalibrationPlanningDetail,
-  CalibrationPlanningMonth,
-  CalibrationPlanningStatus,
-} from "@/types/calibrationPlanning"
+import type { CalibrationPlanningMonth } from "@/types/calibrationPlanning"
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-]
-
-const STATUS_LABELS: Record<CalibrationPlanningStatus, string> = {
-  completed: "Completed",
-  due_soon: "Due Soon",
-  upcoming: "Upcoming / Scheduled",
-  overdue: "Overdue",
+type SummaryCard = {
+  label: string
+  value: number
+  tone: "blue" | "green" | "amber" | "red" | "slate"
+  Icon: typeof CalendarDays
 }
 
-type DialogSelection = {
-  month?: CalibrationPlanningMonth
-  attentionStatus?: CalibrationPlanningStatus
-} | null
-
-function formatDate(value?: string | null) {
-  if (!value) return "N/A"
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString("en-GB")
-}
-
-function toPrintRows(rows: CalibrationPlanningDetail[]): CalibrationDueReportPrintRow[] {
-  return rows.map((row, index) => ({
-    serialNo: index + 1,
-    gaugeName: row.gauge_name,
-    identificationNo: row.identification_number || "N/A",
-    calibrationFrequency: row.frequency_label,
-    lastCalibrationDate: formatDate(row.last_calibration_date),
-    dueDate: formatDate(row.due_date),
-    daysWindow: row.status === "completed" ? "Completed" : row.days_remaining == null ? "N/A" : `${Math.abs(row.days_remaining)} days`,
-    currentStatus: STATUS_LABELS[row.status],
-  }))
-}
+const TONE_STYLES = {
+  blue: { icon: "text-[#2563eb]", iconSurface: "bg-[#eaf1ff]", value: "text-[#1d4ed8]" },
+  green: { icon: "text-[#168566]", iconSurface: "bg-[#e7f7f0]", value: "text-[#13795b]" },
+  amber: { icon: "text-[#be6506]", iconSurface: "bg-[#fff4df]", value: "text-[#a65300]" },
+  red: { icon: "text-[#d13d3d]", iconSurface: "bg-[#fff0ef]", value: "text-[#b83131]" },
+  slate: { icon: "text-[#52627d]", iconSurface: "bg-[#eef2f7]", value: "text-[#17233b]" },
+} as const
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error && error.message ? error.message : "Unable to load calibration planning."
 }
 
+function completionPercentage(month: CalibrationPlanningMonth) {
+  return month.planned > 0 ? Math.round((month.completed / month.planned) * 100) : 0
+}
+
+function MonthStatusSummary({ month }: { month: CalibrationPlanningMonth }) {
+  const pending = month.upcoming + month.due_soon
+  const statuses = [
+    month.completed > 0 ? { label: `Completed ${month.completed}`, color: "success" as const } : null,
+    pending > 0 ? { label: `Pending ${pending}`, color: "warning" as const } : null,
+    month.overdue > 0 ? { label: `Overdue ${month.overdue}`, color: "danger" as const } : null,
+  ].filter(Boolean) as Array<{ label: string; color: "success" | "warning" | "danger" }>
+
+  if (statuses.length === 0) {
+    return <p className="text-xs text-[#7a879c]">No calibrations scheduled</p>
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {statuses.map((status) => (
+        <Chip key={status.label} size="sm" variant="flat" color={status.color} className="h-6 text-[11px] font-medium">
+          {status.label}
+        </Chip>
+      ))}
+    </div>
+  )
+}
+
 export function CalibrationDueReportPage() {
+  const navigate = useNavigate()
   const currentYear = new Date().getFullYear()
   const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo()
   const [selectedYear, setSelectedYear] = useState(currentYear)
-  const [dialogSelection, setDialogSelection] = useState<DialogSelection>(null)
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [exportRows, setExportRows] = useState<CalibrationDueReportPrintRow[]>([])
-  const [exportTitle, setExportTitle] = useState("")
   const [isPreparingExport, setIsPreparingExport] = useState(false)
   const { data, isLoading, isFetching, isError, error, refetch } = useCalibrationPlanningOverview(selectedYear)
 
@@ -80,35 +93,27 @@ export function CalibrationDueReportPage() {
     () => Array.from({ length: 9 }, (_, index) => currentYear - 4 + index),
     [currentYear]
   )
+  const yearSelectItems = useMemo(
+    () => yearOptions.map((year) => ({ key: String(year), label: String(year) })),
+    [yearOptions]
+  )
 
-  const openExport = async ({
-    year,
-    month,
-    status,
-    search,
-    title,
-  }: {
-    year: number
-    month?: number
-    status?: CalibrationPlanningStatus
-    search?: string
-    title: string
-  }) => {
+  const summaryCards: SummaryCard[] = [
+    { label: "Total Planned", value: data?.summary.total_planned ?? 0, Icon: CalendarDays, tone: "slate" },
+    { label: "Completed", value: data?.summary.completed ?? 0, Icon: CheckCircle2, tone: "green" },
+    { label: "Pending", value: (data?.summary.upcoming ?? 0) + (data?.summary.due_soon ?? 0), Icon: Clock3, tone: "amber" },
+    { label: "Overdue", value: data?.summary.overdue ?? 0, Icon: AlertTriangle, tone: "red" },
+  ]
+
+  const handleAnnualExport = async () => {
     setIsPreparingExport(true)
     try {
-      const response = await calibrationPlanningService.getDetails({
-        year,
-        month,
-        status,
-        search,
-        limit: 500,
-      })
+      const response = await calibrationPlanningService.getDetails({ year: selectedYear, limit: 500 })
       if (response.data.length === 0) {
         toast.error("No gauges are available for this export.")
         return
       }
-      setExportRows(toPrintRows(response.data))
-      setExportTitle(title)
+      setExportRows(toCalibrationPlanningPrintRows(response.data))
       setIsExportPreviewOpen(true)
     } catch (exportError) {
       toast.error(getErrorMessage(exportError))
@@ -119,118 +124,128 @@ export function CalibrationDueReportPage() {
 
   if (isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Unable to load calibration planning</AlertTitle>
-        <AlertDescription className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <span>{getErrorMessage(error)}</span>
-          <Button variant="outline" size="sm" onClick={() => void refetch()}><RefreshCw className="h-4 w-4" />Retry</Button>
-        </AlertDescription>
-      </Alert>
+      <Card className="border border-[#f2c9c9] bg-[#fff8f8] shadow-none">
+        <CardBody className="flex flex-row items-center justify-between gap-4 p-5">
+          <div>
+            <p className="font-semibold text-[#9f2727]">Unable to load calibration planning</p>
+            <p className="mt-1 text-sm text-[#8b5f5f]">{getErrorMessage(error)}</p>
+          </div>
+          <Button variant="flat" color="danger" startContent={<RefreshCw className="h-4 w-4" />} onPress={() => void refetch()}>
+            Retry
+          </Button>
+        </CardBody>
+      </Card>
     )
   }
 
-  const summary = data?.summary
-  const months = data?.months ?? []
-  const summaryCards = [
-    { label: "Total Planned", value: summary?.total_planned ?? 0, Icon: CalendarDays, textClassName: "text-foreground", backgroundClassName: "bg-muted/40" },
-    { label: "Completed", value: summary?.completed ?? 0, Icon: CheckCircle2, textClassName: "text-emerald-700", backgroundClassName: "bg-emerald-50" },
-    { label: "Upcoming / Scheduled", value: summary?.upcoming ?? 0, Icon: Clock3, textClassName: "text-blue-700", backgroundClassName: "bg-blue-50" },
-    { label: "Due Soon", value: summary?.due_soon ?? 0, Icon: AlertTriangle, textClassName: "text-amber-700", backgroundClassName: "bg-amber-50", attentionStatus: "due_soon" as const },
-    { label: "Overdue", value: summary?.overdue ?? 0, Icon: AlertTriangle, textClassName: "text-red-700", backgroundClassName: "bg-red-50", attentionStatus: "overdue" as const },
-  ]
-
   return (
-    <div className="w-full space-y-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-5 text-[#17233b]">
+      <section className="flex flex-col gap-4 border-b border-[#e6ebf2] pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Calibration Planning</h2>
-          <p className="text-sm text-muted-foreground">See the full year first, then open a month only when you need the gauge-level plan.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#2563eb]">Reports</p>
+          <h1 className="mt-1 text-2xl font-semibold">Calibration Planning</h1>
+          <p className="mt-1 text-sm text-[#6b7a92]">Annual workload, completion progress, and calibration exceptions in one view.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
-            <SelectTrigger className="w-[132px]"><SelectValue placeholder="Year" /></SelectTrigger>
-            <SelectContent>{yearOptions.map((year) => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}</SelectContent>
+        <div className="flex flex-wrap items-end gap-2">
+          <Select
+            aria-label="Planning year"
+            items={yearSelectItems}
+            className="w-[148px]"
+            classNames={{ trigger: "border border-[#d8e0ec] bg-white shadow-none" }}
+            selectedKeys={[String(selectedYear)]}
+            onSelectionChange={(keys) => {
+              const [year] = keys === "all" ? [] : Array.from(keys)
+              if (year) setSelectedYear(Number(year))
+            }}
+          >
+            {(year) => <SelectItem key={year.key}>{year.label}</SelectItem>}
           </Select>
           <Button
-            variant="outline"
-            disabled={isPreparingExport || (summary?.total_planned ?? 0) === 0}
-            onClick={() => void openExport({ year: selectedYear, title: `Calibration Planning - ${selectedYear}` })}
+            variant="flat"
+            color="primary"
+            isLoading={isPreparingExport}
+            isDisabled={(data?.summary.total_planned ?? 0) === 0}
+            startContent={!isPreparingExport ? <Download className="h-4 w-4" /> : undefined}
+            onPress={() => void handleAnnualExport()}
           >
-            <Download className="h-4 w-4" />
-            Export Annual Plan
+            Export annual plan
           </Button>
-          <Button variant="outline" size="icon" aria-label="Refresh planning" disabled={isFetching} onClick={() => void refetch()}><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></Button>
+          <Button isIconOnly variant="light" aria-label="Refresh planning" isDisabled={isFetching} onPress={() => void refetch()}>
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          </Button>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {summaryCards.map(({ label, value, Icon, textClassName, backgroundClassName, attentionStatus }) => {
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {summaryCards.map(({ label, value, Icon, tone }) => {
+          const style = TONE_STYLES[tone]
           return (
-            <Card key={label} className="border-border/70 shadow-sm">
-              <CardContent className="flex items-start justify-between gap-3 p-4">
+            <Card key={label} className="border border-[#e4eaf2] bg-white shadow-sm">
+              <CardBody className="flex flex-row items-start justify-between p-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">{label}</p>
-                  <p className={`mt-1 text-2xl font-semibold ${textClassName}`}>{isLoading ? "-" : value}</p>
+                  <p className="text-sm text-[#6b7a92]">{label}</p>
+                  <div className={`mt-2 text-2xl font-semibold ${style.value}`}>
+                    {isLoading ? <Spinner size="sm" color="default" /> : value}
+                  </div>
                 </div>
-                <div className={`rounded-md p-2 ${backgroundClassName}`}><Icon className={`h-4 w-4 ${textClassName}`} /></div>
-              </CardContent>
-              {attentionStatus && (
-                <button
-                  type="button"
-                  className="w-full border-t px-4 py-2 text-left text-xs font-medium text-primary hover:bg-muted/40"
-                  onClick={() => setDialogSelection({ attentionStatus })}
-                >
-                  View affected gauges
-                </button>
-              )}
+                <span className={`rounded-lg p-2.5 ${style.iconSurface}`}><Icon className={`h-4 w-4 ${style.icon}`} /></span>
+              </CardBody>
             </Card>
           )
         })}
-      </div>
+      </section>
 
-      <Card className="border-border/70 shadow-sm">
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="border border-[#e1e7f0] bg-white shadow-sm">
+        <CardHeader className="flex flex-col items-start gap-2 border-b border-[#edf1f6] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-lg">{selectedYear} Month-by-Month Plan</CardTitle>
-            <CardDescription>Open a month to search, filter, print, or download its planned gauge list.</CardDescription>
+            <h2 className="text-lg font-semibold text-[#17233b]">{selectedYear} calibration calendar</h2>
+            <p className="mt-1 text-sm text-[#6b7a92]">Select a month to view its gauges, certificate references, and downloadable report.</p>
           </div>
-          <span className="text-sm text-muted-foreground">{summary?.total_planned ?? 0} planned calibration{(summary?.total_planned ?? 0) === 1 ? "" : "s"}</span>
+          <Chip size="sm" variant="flat" color="primary">{data?.summary.total_planned ?? 0} planned</Chip>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {months.map((month) => (
-              <button
-                type="button"
-                key={month.month}
-                className="min-h-[168px] rounded-lg border border-border/70 bg-background p-4 text-left transition-colors hover:border-primary/50 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                onClick={() => setDialogSelection({ month })}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold">{MONTHS[month.month - 1]}</h3>
-                  <span className="text-sm font-medium text-muted-foreground">{month.planned} planned</span>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-y-2 text-sm">
-                  <span className="text-emerald-700">{month.completed} completed</span>
-                  <span className="text-amber-700">{month.due_soon} due soon</span>
-                  <span className="text-blue-700">{month.upcoming} upcoming</span>
-                  <span className="text-red-700">{month.overdue} overdue</span>
-                </div>
-              </button>
-            ))}
-          </div>
-          {!isLoading && months.length === 0 && <p className="py-12 text-center text-sm text-muted-foreground">No calibration planning data is available for {selectedYear}.</p>}
-        </CardContent>
+        <CardBody className="p-4 sm:p-5">
+          {isLoading ? (
+            <div className="flex min-h-72 items-center justify-center"><Spinner label="Loading yearly calibration plan" color="primary" /></div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {(data?.months ?? []).map((month) => {
+                const completion = completionPercentage(month)
+                return (
+                  <Card
+                    key={month.month}
+                    isPressable
+                    className="min-h-[188px] border border-[#e5eaf1] bg-white text-left shadow-none transition-shadow hover:border-[#9db8ff] hover:shadow-md"
+                    onPress={() => navigate(`/reports/calibration-due-report/${selectedYear}/${month.month}`)}
+                  >
+                    <CardHeader className="flex items-start justify-between gap-3 px-4 pb-0 pt-4">
+                      <div>
+                        <p className="text-base font-semibold text-[#17233b]">{CALIBRATION_MONTHS[month.month - 1]}</p>
+                        <p className="mt-1 text-sm text-[#6b7a92]">{month.planned} planned gauge{month.planned === 1 ? "" : "s"}</p>
+                      </div>
+                      {month.overdue > 0 && <Chip size="sm" color="danger" variant="flat">{month.overdue} overdue</Chip>}
+                    </CardHeader>
+                    <CardBody className="gap-4 px-4 pb-4 pt-4">
+                      <div>
+                        <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#62718a]">
+                          <span>Completion</span>
+                          <span className="text-[#1d4ed8]">{completion}%</span>
+                        </div>
+                        <Progress
+                          aria-label={`${CALIBRATION_MONTHS[month.month - 1]} completion`}
+                          value={completion}
+                          size="sm"
+                          classNames={{ track: "bg-[#eaf0f7]", indicator: "bg-[#1d8b68]" }}
+                        />
+                      </div>
+                      <MonthStatusSummary month={month} />
+                    </CardBody>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </CardBody>
       </Card>
-
-      <CalibrationPlanningDetailDialog
-        key={`${selectedYear}-${dialogSelection?.month?.month ?? "attention"}-${dialogSelection?.attentionStatus ?? "all"}`}
-        open={dialogSelection !== null}
-        onOpenChange={(open) => !open && setDialogSelection(null)}
-        year={selectedYear}
-        month={dialogSelection?.month}
-        attentionStatus={dialogSelection?.attentionStatus}
-        onExport={(params) => void openExport(params)}
-      />
 
       <CalibrationDueReportPrintPreview
         open={isExportPreviewOpen}
@@ -238,7 +253,7 @@ export function CalibrationDueReportPage() {
         rows={exportRows}
         companyName={organizationName}
         companyAddress={organizationAddress}
-        selectedPeriodLabel={exportTitle}
+        selectedPeriodLabel={`Calibration Planning ${selectedYear}`}
       />
     </div>
   )

@@ -8,6 +8,7 @@ import { queryClient } from './lib/queryClient'
 import { AuthProvider } from './contexts/AuthContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerPwaServiceWorker } from './lib/registerPwaServiceWorker'
+import { HeroUIProvider } from '@heroui/react'
 
 registerPwaServiceWorker()
 
@@ -24,9 +25,11 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <ThemeProvider defaultTheme="system" storageKey="calibration-ui-theme">
-            <App />
-          </ThemeProvider>
+          <HeroUIProvider>
+            <ThemeProvider defaultTheme="system" storageKey="calibration-ui-theme">
+              <App />
+            </ThemeProvider>
+          </HeroUIProvider>
         </AuthProvider>
         {ReactQueryDevtools ? (
           <Suspense fallback={null}>
