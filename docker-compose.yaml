@@ -11,5 +11,7 @@ services:
       # Enable hot reload (important for dev)
       - .:/app
       - /app/node_modules
-    command: npm run dev -- --host --port 5174
+    # The mounted node_modules volume survives image rebuilds. Reinstall from
+    # the lockfile before Vite starts so new shadcn/Radix dependencies resolve.
+    command: sh -c "npm ci --no-audit --no-fund && npm run dev -- --host --port 5174"
     restart: unless-stopped
