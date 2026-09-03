@@ -45,6 +45,7 @@ type MetricProps = {
   valueClassName: string
   iconClassName: string
   className?: string
+  showLabel?: boolean
 }
 
 const statusStyles: Record<MonthlyPlanningCardStatus, { label: string; className: string }> = {
@@ -145,17 +146,20 @@ const visualStyles: Record<MonthlyPlanningVisualState, {
   },
 }
 
-function Metric({ label, value, Icon, valueClassName, iconClassName, className }: MetricProps) {
+function Metric({ label, value, Icon, valueClassName, iconClassName, className, showLabel = false }: MetricProps) {
   return (
     <div className={cn("flex min-w-0 flex-col items-center px-2 first:pl-0 last:pr-0 sm:px-3 sm:border-r sm:border-[#e2e8f0] sm:last:border-r-0", className)}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span tabIndex={0} aria-label={`${label}: ${value.toLocaleString()}`} className="inline-flex cursor-help rounded-sm p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]">
-            <Icon className={cn("h-5 w-5 shrink-0", iconClassName)} aria-hidden="true" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top">{label}: {value.toLocaleString()}</TooltipContent>
-      </Tooltip>
+      <div className="flex min-w-0 items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0} aria-label={`${label}: ${value.toLocaleString()}`} className="inline-flex cursor-help rounded-sm p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]">
+              <Icon className={cn("h-5 w-5 shrink-0", iconClassName)} aria-hidden="true" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">{label}: {value.toLocaleString()}</TooltipContent>
+        </Tooltip>
+        {showLabel && <span className="truncate text-sm font-medium text-[#344560]">{label}</span>}
+      </div>
       <p className={cn("mt-1 text-xl font-semibold tabular-nums", valueClassName)}>{value.toLocaleString()}</p>
     </div>
   )
@@ -203,8 +207,6 @@ export function MonthlyPlanningCard({
   const visualState = getMonthlyPlanningVisualState({ month, year, planned, completed, pending, overdue })
   const visualStyle = visualStyles[visualState]
   const weeklyCounts = normalizeWeeklyPlan(weeklyPlan)
-  const weeklyTotal = weeklyCounts.reduce((total, count) => total + count, 0)
-  const weeklyTotalMatches = weeklyTotal === planned
   const maximumWeeklyCount = Math.max(...weeklyCounts, 0)
   const hasPlan = planned > 0
   const isDetailed = variant === "detailed"
@@ -258,10 +260,10 @@ export function MonthlyPlanningCard({
       <CardContent className={cn(isDetailed ? "space-y-5 p-5 sm:p-6" : "space-y-4 p-4")}>
         <TooltipProvider delayDuration={200}>
           <div className={cn("grid grid-cols-2 gap-y-3 sm:grid-cols-4 sm:gap-y-0", !isDetailed && "text-sm")}>
-            <Metric label="Planned" value={planned} Icon={CalendarDays} iconClassName="text-[#2563eb]" valueClassName="text-[#1d4ed8]" />
-            <Metric label="Completed" value={completed} Icon={CheckCircle2} iconClassName="text-[#168566]" valueClassName="text-[#13795b]" className="sm:pl-3" />
-            <Metric label="Pending" value={pending} Icon={Clock3} iconClassName="text-[#d97706]" valueClassName="text-[#c25c08]" className="sm:pl-3" />
-            <Metric label="Overdue" value={overdue} Icon={AlertTriangle} iconClassName="text-[#dc2626]" valueClassName="text-[#c62828]" className="sm:pl-3" />
+            <Metric label="Planned" value={planned} Icon={CalendarDays} iconClassName="text-[#2563eb]" valueClassName="text-[#1d4ed8]" showLabel={isDetailed} />
+            <Metric label="Completed" value={completed} Icon={CheckCircle2} iconClassName="text-[#168566]" valueClassName="text-[#13795b]" className="sm:pl-3" showLabel={isDetailed} />
+            <Metric label="Pending" value={pending} Icon={Clock3} iconClassName="text-[#d97706]" valueClassName="text-[#c25c08]" className="sm:pl-3" showLabel={isDetailed} />
+            <Metric label="Overdue" value={overdue} Icon={AlertTriangle} iconClassName="text-[#dc2626]" valueClassName="text-[#c62828]" className="sm:pl-3" showLabel={isDetailed} />
           </div>
         </TooltipProvider>
 
@@ -279,11 +281,6 @@ export function MonthlyPlanningCard({
                 </div>
               ))}
             </div>
-            {!weeklyTotalMatches && (
-              <p className="mt-3 text-xs font-medium text-[#b45309]" role="status">
-                Weekly schedule totals {weeklyTotal.toLocaleString()}; the monthly plan is {planned.toLocaleString()}.
-              </p>
-            )}
           </div>
         )}
 
@@ -298,7 +295,7 @@ export function MonthlyPlanningCard({
           {isDetailed && (
             <Button
               type="button"
-              className="w-full bg-[#98b7fa] font-semibold text-white hover:bg-[#1d4ed8] focus-visible:ring-[#2563eb] sm:w-auto"
+              className="w-full bg-[#2563eb] font-semibold text-white hover:bg-[#1d4ed8] focus-visible:ring-[#2563eb] sm:w-auto"
               onClick={(event) => {
                 event.stopPropagation()
                 onViewPlan()

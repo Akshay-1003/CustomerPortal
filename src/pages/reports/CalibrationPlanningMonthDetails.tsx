@@ -263,11 +263,11 @@ export function CalibrationPlanningMonthDetailsPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-[70px] px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Sr No</TableHead>
                   <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Gauge name</TableHead>
-                  <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Identification no.</TableHead>
+                  <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Identification</TableHead>
                   <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Frequency</TableHead>
                   <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Last calibration</TableHead>
-                  <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Due date</TableHead>
-                  <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Certificate details</TableHead>
+                  <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Next Calibration</TableHead>
+                  <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Certificate No.</TableHead>
                   <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Days remaining</TableHead>
                   <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide text-[#66758d]">Status</TableHead>
                 </TableRow>

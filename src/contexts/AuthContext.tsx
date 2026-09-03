@@ -1,4 +1,5 @@
 import { createContext, useEffect, useRef, useState, type ReactNode } from "react"
+import { apiService } from "@/services/api.service"
 import { authService, type AuthContext as StoredAuthContext } from "@/services/auth.service"
 import type {
   CustomerWorkspaceSelectionResponse,
@@ -6,8 +7,8 @@ import type {
   User,
 } from "@/types/api"
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000
 const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 2 * 60 * 1000
+const RESUME_REFRESH_DEBOUNCE_MS = 30 * 1000
 
 interface LoginUser {
   id: string
@@ -50,6 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingWorkspaceSelection, setPendingWorkspaceSelection] =
     useState<PendingWorkspaceSelection | null>(null)
   const lastActivityAt = useRef(0)
+  const lastTokenRefreshAt = useRef(0)
+  const lastResumeRefreshAt = useRef(0)
+  const sessionCheckInFlight = useRef(false)
 
   useEffect(() => {
     let mounted = true
@@ -83,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return
 
+    let disposed = false
+
     const noteActivity = () => {
       lastActivityAt.current = Date.now()
     }
@@ -93,28 +99,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       "scroll",
     ]
     activityEvents.forEach((event) => window.addEventListener(event, noteActivity, { passive: true }))
-    noteActivity()
+    lastActivityAt.current = Date.now()
+    lastTokenRefreshAt.current = Date.now()
 
-    const sessionTimer = window.setInterval(async () => {
-      const idleFor = Date.now() - lastActivityAt.current
-      if (idleFor >= IDLE_TIMEOUT_MS) {
-        await authService.logout()
-        setUser(null)
-        return
-      }
+    const refreshSession = async (force = false) => {
+      if (disposed || sessionCheckInFlight.current) return
 
-      const token = authService.getAccessTokenExpiry()
-      if (token && token - Date.now() <= ACCESS_TOKEN_REFRESH_LEEWAY_MS) {
-        try {
-          await authService.renewSession()
-        } catch {
-          setUser(null)
+      const expiresAt = authService.getAccessTokenExpiry()
+      const isExpiringSoon = !expiresAt || expiresAt - Date.now() <= ACCESS_TOKEN_REFRESH_LEEWAY_MS
+      const hasRecentUserActivity = lastActivityAt.current > lastTokenRefreshAt.current
+      if (!force && (!isExpiringSoon || !hasRecentUserActivity)) return
+
+      sessionCheckInFlight.current = true
+      try {
+        await authService.renewSession()
+        lastTokenRefreshAt.current = Date.now()
+      } catch (error) {
+        if (apiService.isTerminalRefreshFailure(error)) {
+          apiService.expireSession()
         }
+      } finally {
+        sessionCheckInFlight.current = false
+      }
+    }
+
+    const refreshAfterResume = () => {
+      if (document.visibilityState === "hidden") return
+
+      const now = Date.now()
+      if (now - lastResumeRefreshAt.current < RESUME_REFRESH_DEBOUNCE_MS) return
+
+      lastResumeRefreshAt.current = now
+      noteActivity()
+      void refreshSession(true)
+    }
+
+    const refreshAfterReconnect = () => {
+      if (document.visibilityState !== "hidden") {
+        void refreshSession()
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshAfterResume()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", refreshAfterResume)
+    window.addEventListener("pageshow", refreshAfterResume)
+    window.addEventListener("online", refreshAfterReconnect)
+
+    const sessionTimer = window.setInterval(() => {
+      if (document.visibilityState !== "hidden") {
+        void refreshSession()
       }
     }, 60_000)
 
     return () => {
+      disposed = true
       activityEvents.forEach((event) => window.removeEventListener(event, noteActivity))
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", refreshAfterResume)
+      window.removeEventListener("pageshow", refreshAfterResume)
+      window.removeEventListener("online", refreshAfterReconnect)
       window.clearInterval(sessionTimer)
     }
   }, [user])

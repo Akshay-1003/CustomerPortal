@@ -227,7 +227,7 @@ export function CalibrationDueReportPrintPreview({
                   <tr>
                     <th className="cdr-col-sn">SN</th>
                     <th>Gauge Name</th>
-                    <th>Identification No.</th>
+                    <th>Identification</th>
                     <th>Calibration Frequency</th>
                     <th>Last Calibration Date</th>
                     <th>Due Date</th>

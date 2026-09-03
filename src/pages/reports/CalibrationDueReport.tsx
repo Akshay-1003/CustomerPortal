@@ -43,6 +43,12 @@ const TONE_STYLES = {
   slate: { root: "bg-[#fbfcfe]", icon: "text-[#52627d]", iconSurface: "bg-[#eef2f7]", value: "text-[#17233b]", label: "text-[#52627d]" },
 } as const
 
+let retainedPlanningYear: number | null = null
+
+function getRetainedPlanningYear(fallbackYear: number): number {
+  return retainedPlanningYear ?? fallbackYear
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error && error.message ? error.message : "Unable to load calibration planning."
 }
@@ -67,7 +73,7 @@ export function CalibrationDueReportPage() {
   const navigate = useNavigate()
   const currentYear = new Date().getFullYear()
   const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo()
-  const [selectedYear, setSelectedYear] = useState(currentYear)
+  const [selectedYear, setSelectedYear] = useState(() => getRetainedPlanningYear(currentYear))
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [exportRows, setExportRows] = useState<CalibrationDueReportPrintRow[]>([])
   const [isPreparingExport, setIsPreparingExport] = useState(false)
@@ -84,6 +90,14 @@ export function CalibrationDueReportPage() {
     { label: "Pending", value: (data?.summary.upcoming ?? 0) + (data?.summary.due_soon ?? 0), Icon: Clock3, tone: "amber" },
     { label: "Overdue", value: data?.summary.overdue ?? 0, Icon: AlertTriangle, tone: "red" },
   ]
+
+  const handleYearChange = (value: string) => {
+    const year = Number(value)
+    if (!Number.isInteger(year)) return
+
+    retainedPlanningYear = year
+    setSelectedYear(year)
+  }
 
   const handleAnnualExport = async () => {
     setIsPreparingExport(true)
@@ -128,7 +142,7 @@ export function CalibrationDueReportPage() {
           <p className="mt-1 text-sm text-[#6b7a92]">Annual workload, completion progress, and calibration exceptions in one view.</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <Select value={String(selectedYear)} onValueChange={(value) => setSelectedYear(Number(value))}>
+          <Select value={String(selectedYear)} onValueChange={handleYearChange}>
             <SelectTrigger aria-label="Planning year" className="w-[148px] border-[#d8e0ec] bg-white shadow-none">
               <SelectValue />
             </SelectTrigger>

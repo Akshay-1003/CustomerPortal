@@ -23,11 +23,13 @@ class ApiService {
   private accessToken: string | null = null
   private refreshPromise: Promise<string> | null = null
   private authChannel: BroadcastChannel | null = null
+  private sessionExpired = false
 
   constructor() {
     this.api = axios.create({
       baseURL: env.apiBaseUrl,
       withCredentials: true,
+      timeout: env.apiRequestTimeoutMs,
       headers: { "Content-Type": "application/json" },
     })
 
@@ -38,9 +40,10 @@ class ApiService {
           this.setAuthToken(event.data.token, false)
         }
         if (event.data?.type === "signed-out") {
+          this.sessionExpired = true
           this.clearLocalAuthState(false)
           window.dispatchEvent(new Event("customerportal:session-expired"))
-          redirectToAppPath("/login")
+          redirectToAppPath("/login?reason=session-expired")
         }
       }
     }
@@ -77,7 +80,9 @@ class ApiService {
           originalRequest.headers.Authorization = `Bearer ${token}`
           return this.api.request(originalRequest)
         } catch (refreshError) {
-          this.handleExpiredSession()
+          if (this.isTerminalRefreshFailure(refreshError)) {
+            this.handleExpiredSession()
+          }
           return Promise.reject(refreshError)
         }
       },
@@ -86,6 +91,11 @@ class ApiService {
 
   private isAuthenticationEndpoint(url?: string): boolean {
     return Boolean(url && /(?:^|\/)auth\/(?:customer\/login|customer\/select-organization|refresh|logout)/.test(url))
+  }
+
+  isTerminalRefreshFailure(error: unknown): boolean {
+    const status = (error as AxiosError | undefined)?.response?.status
+    return status === 400 || status === 401 || status === 403
   }
 
   private async refreshAccessToken(): Promise<string> {
@@ -111,9 +121,18 @@ class ApiService {
   }
 
   private handleExpiredSession(): void {
+    this.expireSession()
+  }
+
+  expireSession(): void {
+    if (this.sessionExpired) {
+      return
+    }
+
+    this.sessionExpired = true
     this.clearLocalAuthState()
     window.dispatchEvent(new Event("customerportal:session-expired"))
-    redirectToAppPath("/login")
+    redirectToAppPath("/login?reason=session-expired")
   }
 
   clearLocalAuthState(notifyOtherTabs = true): void {
@@ -128,7 +147,9 @@ class ApiService {
     try {
       return await this.refreshAccessToken()
     } catch (error) {
-      this.clearLocalAuthState(false)
+      if (this.isTerminalRefreshFailure(error)) {
+        this.clearLocalAuthState(false)
+      }
       throw error
     }
   }
@@ -159,6 +180,7 @@ class ApiService {
   }
 
   setAuthToken(token: string, notifyOtherTabs = true): void {
+    this.sessionExpired = false
     this.accessToken = token
     if (notifyOtherTabs) {
       this.authChannel?.postMessage({ type: "access-token", token } satisfies AuthBroadcastMessage)

@@ -35,6 +35,7 @@ export function Login() {
   const { login } = useAuth()
   const [isBackgroundReady, setIsBackgroundReady] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const sessionExpired = new URLSearchParams(location.search).get("reason") === "session-expired"
 
   useEffect(() => {
     const image = new Image()
@@ -162,6 +163,14 @@ export function Login() {
                 {form.formState.errors.root && (
                   <Alert variant="destructive">
                     <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
+                  </Alert>
+                )}
+
+                {sessionExpired && !form.formState.errors.root && (
+                  <Alert>
+                    <AlertDescription>
+                      Your session expired due to inactivity. Sign in to continue.
+                    </AlertDescription>
                   </Alert>
                 )}
 
