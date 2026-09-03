@@ -1,11 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/hooks/useAuth"
-import { useOrganizations } from "@/hooks/useOrganizations"
+import { useOrganizationById } from "@/hooks/useOrganizations"
 
 export function Settings() {
   const { user } = useAuth()
   const profile = user?.user
-  const { data: organizations, isLoading: isLoadingOrgs } = useOrganizations()
+  const { data: organization, isLoading: isLoadingOrganization } = useOrganizationById(profile?.organization_id || "")
 
   const displayValue = (value: unknown, fallback = "Not Available") => {
     if (!value || value === "None") return fallback
@@ -57,7 +57,7 @@ const roles = [
             <Info label="Department" value={displayValue(profile?.department, "Not Assigned")} />
 
             {/* Organization */}
-            <Info label="Organization Name" value={ isLoadingOrgs ? "Loading..." : organizations?.find(org => org.id === profile?.organization_id)?.name || "Not Assigned"} />
+            <Info label="Organization Name" value={ isLoadingOrganization ? "Loading..." : organization?.name || "Not Assigned"} />
 
             {/* Lab */}
             <Info label="Lab ID" value={displayValue(profile?.lab_id, "Not Assigned")} />

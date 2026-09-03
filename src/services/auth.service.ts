@@ -1,24 +1,23 @@
-import { apiService } from './api.service'
-import type { LoginRequest, LoginResponse, Organization, User } from '@/types/api'
-import Cookies from 'js-cookie'
-import { jwtDecode } from 'jwt-decode'
+import { apiService } from "./api.service"
+import type {
+  CustomerLoginResponse,
+  CustomerWorkspaceSelectionResponse,
+  LoginRequest,
+  LoginResponse,
+  Organization,
+  User,
+} from "@/types/api"
+import { jwtDecode } from "jwt-decode"
 
-type OrganizationListResponse =
-  | Organization[]
-  | {
-      organizations: Organization[]
-      total_count?: number
-      page?: number
-    }
-
-/* ----------------------------- */
-/* Token Types                   */
-/* ----------------------------- */
+const AUTH_CONTEXT_KEY = "customerportal.auth-context"
 
 export interface DecodedToken {
   sub: string
-  org_id: string
+  organization_id: string
+  org_id?: string
+  role?: string
   roles: string[]
+  permissions?: string[]
   jti: string
   exp: number
 }
@@ -30,98 +29,117 @@ export interface AuthContext {
   user: User
 }
 
-/* ----------------------------- */
-/* Utils                         */
-/* ----------------------------- */
-
 function decodeAccessToken(token: string): DecodedToken {
   return jwtDecode<DecodedToken>(token)
 }
 
-/* ----------------------------- */
-/* Auth Service                  */
-/* ----------------------------- */
+function isWorkspaceSelectionRequired(
+  response: CustomerLoginResponse,
+): response is CustomerWorkspaceSelectionResponse {
+  return "requires_organization_selection" in response && response.requires_organization_selection
+}
 
 export const authService = {
-  /* -------- LOGIN -------- */
-
-  async login(data: LoginRequest): Promise<LoginResponse> {
-    const response = await apiService.post<LoginResponse>(
-      'auth/customer/login',
-      {
-        email: data.email,
-        password: data.password,
-        organization_id: data.organization_id || undefined,
-      },
-      {
-        withCredentials: true,
-      }
+  async login(data: LoginRequest): Promise<CustomerLoginResponse> {
+    const response = await apiService.post<CustomerLoginResponse>(
+      "auth/customer/login",
+      data,
+      { withCredentials: true },
     )
 
-    if (!response.access_token) {
-      throw new Error('Access token not received from server')
+    if (isWorkspaceSelectionRequired(response)) {
+      return response
     }
 
-    // ✅ Save token
-    apiService.setAuthToken(response.access_token)
-
-    // ✅ Decode token (industry standard)
-    const decoded = decodeAccessToken(response.access_token)
-    const user = await apiService.get<User>(`user/${decoded.sub}`,{
-      withCredentials: true,
-    })
-
-    const authContext: AuthContext = {
-      id: decoded.sub,
-      organization_id: decoded.org_id,
-      roles: decoded.roles,
-      user: user,
-    }
-
-    // ✅ Persist auth context
-    this.setAuthContext(authContext)
-
+    await this.establishSession(response)
     return response
   },
 
-  async getUserById(userId: string): Promise<User> {
-    return apiService.get<User>(`user/${userId}`, {
-      withCredentials: true,
-    })
+  async selectOrganization(
+    loginChallenge: string,
+    organizationId: string,
+  ): Promise<LoginResponse> {
+    const response = await apiService.post<LoginResponse>(
+      "auth/customer/select-organization",
+      { login_challenge: loginChallenge, organization_id: organizationId },
+      { withCredentials: true },
+    )
+    await this.establishSession(response)
+    return response
   },
 
-  setAuthContext(authContext: AuthContext) {
-    Cookies.set('auth', JSON.stringify(authContext), { expires: 7 })
-    Cookies.set('organization_id', authContext.organization_id, { expires: 7 })
+  async restoreSession(): Promise<AuthContext> {
+    const token = await apiService.restoreSession()
+    return this.establishSession({ access_token: token, token_type: "bearer" })
   },
 
-  /* -------- LOGOUT -------- */
-
-  logout() {
-    apiService.removeAuthToken()
-    Cookies.remove('auth')
-    Cookies.remove('organization_id')
+  async renewSession(): Promise<void> {
+    await apiService.restoreSession()
   },
 
-  /* -------- AUTH STATE -------- */
+  async establishSession(response: LoginResponse): Promise<AuthContext> {
+    if (!response.access_token) {
+      throw new Error("Session was created without an access token")
+    }
+
+    apiService.setAuthToken(response.access_token)
+    const decoded = decodeAccessToken(response.access_token)
+    const user = await this.getCurrentUser()
+    const context: AuthContext = {
+      id: decoded.sub,
+      organization_id: decoded.organization_id || decoded.org_id || "",
+      roles: decoded.roles || (decoded.role ? [decoded.role] : []),
+      user,
+    }
+    this.setAuthContext(context)
+    return context
+  },
+
+  async getCurrentUser(): Promise<User> {
+    return apiService.get<User>("auth/me", { withCredentials: true })
+  },
+
+  setAuthContext(authContext: AuthContext): void {
+    sessionStorage.setItem(AUTH_CONTEXT_KEY, JSON.stringify(authContext))
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await apiService.post("auth/logout", undefined, {
+        withCredentials: true,
+        skipAuthRefresh: true,
+      } as never)
+    } finally {
+      apiService.clearLocalAuthState()
+    }
+  },
 
   isAuthenticated(): boolean {
-    return !!apiService.getAuthToken()
+    return Boolean(apiService.getAuthToken())
   },
 
   getAuthContext(): AuthContext | null {
-    const data = Cookies.get('auth')
-    if (!data || data === 'undefined') return null
+    const data = sessionStorage.getItem(AUTH_CONTEXT_KEY)
+    if (!data) return null
 
     try {
-      return JSON.parse(data)
+      return JSON.parse(data) as AuthContext
     } catch {
-      Cookies.remove('auth')
+      sessionStorage.removeItem(AUTH_CONTEXT_KEY)
       return null
     }
   },
 
   getOrganizationId(): string | null {
+    const token = apiService.getAuthToken()
+    if (token) {
+      try {
+        const decoded = decodeAccessToken(token)
+        return decoded.organization_id || decoded.org_id || null
+      } catch {
+        return null
+      }
+    }
     return this.getAuthContext()?.organization_id || null
   },
 
@@ -133,69 +151,21 @@ export const authService = {
     return this.getAuthContext()?.roles || []
   },
 
-  /* -------- ORGANIZATIONS -------- */
-
-  async getOrganizations(): Promise<Organization[]> {
+  getAccessTokenExpiry(): number | null {
+    const token = apiService.getAuthToken()
+    if (!token) return null
     try {
-      let page = 0
-      let totalCount = Number.POSITIVE_INFINITY
-      const organizations: Organization[] = []
-      const seenIds = new Set<string>()
-
-      while (organizations.length < totalCount) {
-        const response = await apiService.get<OrganizationListResponse>('/organizations', {
-          params: { page },
-        })
-
-        if (Array.isArray(response)) {
-          return response
-        }
-
-        const pageItems = Array.isArray(response?.organizations) ? response.organizations : []
-
-        if (pageItems.length === 0) {
-          break
-        }
-
-        let addedCount = 0
-        pageItems.forEach((organization) => {
-          if (organization?.id && !seenIds.has(organization.id)) {
-            seenIds.add(organization.id)
-            organizations.push(organization)
-            addedCount += 1
-          }
-        })
-
-        totalCount =
-          typeof response.total_count === 'number' ? response.total_count : organizations.length
-
-        if (addedCount === 0) {
-          break
-        }
-
-        page += 1
-      }
-
-      return organizations
-    } catch (error) {
-      console.error('Failed to fetch organizations:', error)
-      throw error
+      return decodeAccessToken(token).exp * 1000
+    } catch {
+      return null
     }
   },
+
   async getOrganizationById(id: string): Promise<Organization> {
-    try {
-      const response = await apiService.get<
-        Organization | { organization: Organization }
-      >(`organization/${id}`,{
-        withCredentials: true,
-      })
-
-      if (response && 'organization' in response) return response.organization
-
-      return response as Organization
-    } catch (error) {
-      console.error('Failed to fetch organization:', error)
-      throw error
-    }
+    const response = await apiService.get<Organization | { organization: Organization }>(
+      `organization/${id}`,
+      { withCredentials: true },
+    )
+    return response && "organization" in response ? response.organization : response as Organization
   },
 }

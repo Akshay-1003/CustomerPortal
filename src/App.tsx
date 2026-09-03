@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { lazy, Suspense, type ReactNode } from "react"
 import { DashboardLayout } from "./components/DashboardLayout"
 import { Login } from "./pages/Login"
+import { SelectWorkspace } from "./pages/SelectWorkspace"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { usePageTitle } from "./hooks/usePageTitle"
 import { useAuth } from "./hooks/useAuth"
@@ -66,14 +67,18 @@ const guardedPage = (
 
 function AppContent() {
   usePageTitle()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   
   return (
     <Routes>
       {/* Public Route */}
       <Route 
         path="/login" 
-        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} 
+        element={isLoading ? <PageLoader /> : isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+      />
+      <Route
+        path="/select-workspace"
+        element={isLoading ? <PageLoader /> : <SelectWorkspace />}
       />
       
       {/* Protected Routes */}

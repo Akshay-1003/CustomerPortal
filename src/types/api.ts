@@ -40,21 +40,30 @@ export interface GaugeHistory {
 }
 
 export interface LoginRequest {
-  email: string
+  identifier: string
   password: string
-  organization_id: string
 }
 
 export interface LoginResponse {
   access_token: string
   token_type: string
-  user: {
-    id: string
-    email: string
-    name: string
-    organization_id: string
-  }
 }
+
+export interface CustomerWorkspace {
+  id: string
+  name: string
+  unit_name?: string | null
+  logo_url?: string | null
+}
+
+export interface CustomerWorkspaceSelectionResponse {
+  requires_organization_selection: true
+  login_challenge: string
+  expires_in: number
+  organizations: CustomerWorkspace[]
+}
+
+export type CustomerLoginResponse = LoginResponse | CustomerWorkspaceSelectionResponse
 
 export interface ApiError {
   message: string

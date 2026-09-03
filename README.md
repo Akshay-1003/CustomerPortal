@@ -5,8 +5,9 @@ A professional, enterprise-grade web application for managing industrial gauge c
 ## 🏭 Features
 
 ### Authentication & Authorization
-- ✅ Organization-based login system
-- ✅ Secure token-based authentication (JWT)
+- ✅ Credential-first, multi-tenant customer login
+- ✅ Server-verified workspace selection for users with multiple memberships
+- ✅ Short-lived in-memory access tokens and HTTP-only refresh sessions
 - ✅ Protected routes and session management
 - ✅ User profile and logout functionality
 
@@ -170,18 +171,17 @@ http://35.172.1.180:5000/api/v1
 
 ### Endpoints
 
-#### Authentication
-- `POST /auth/login` - User login
+#### Customer authentication
+- `POST /auth/customer/login` - Verify identifier and password. It either returns an access token for a single membership or a short-lived workspace selection challenge.
   ```json
   {
-    "email": "user@example.com",
-    "password": "password123",
-    "organization_id": "org-id"
+    "identifier": "user@example.com",
+    "password": "password123"
   }
   ```
-
-#### Organizations
-- `GET /organizations` - Get all organizations
+- `POST /auth/customer/select-organization` - Consume `{ "login_challenge", "organization_id" }` for a multi-workspace user.
+- `POST /auth/refresh` - Rotate the HTTP-only refresh cookie and return a new access token.
+- `POST /auth/logout` - Revoke the active refresh sessions and clear the refresh cookie.
 
 #### Gauges
 - `GET /gauge/organization/{organization_id}/gauges` - Get gauges by organization
@@ -191,12 +191,11 @@ http://35.172.1.180:5000/api/v1
 ## 🎯 Key Features Implemented
 
 ### 1. Authentication Flow
-- Organization selection dropdown
-- Email/password login
-- JWT token storage in cookies
-- Auto-redirect on authentication
-- Protected routes
-- Logout functionality
+- Credentials are verified before the server exposes a user's permitted workspaces.
+- Single-workspace users are signed in immediately; multi-workspace users choose from a one-time challenge response.
+- Access tokens are kept only in memory. Refresh tokens are HTTP-only cookies and rotate on renewal.
+- Concurrent `401` responses share one refresh request and each failed request is retried once.
+- The customer portal signs out after 30 minutes without activity; the backend also enforces the idle and absolute refresh-session limits.
 
 ### 2. API Architecture
 - Centralized API service with Axios
