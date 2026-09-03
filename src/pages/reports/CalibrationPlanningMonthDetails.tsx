@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
-import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -23,6 +22,10 @@ import {
   CalibrationDueReportPrintPreview,
   type CalibrationDueReportPrintRow,
 } from "@/components/reports/CalibrationDueReportPrintPreview"
+import {
+  MonthlyPlanningCard,
+  MonthlyPlanningCardSkeleton,
+} from "@/components/reports/MonthlyPlanningCard"
 import { useCalibrationPlanningDetails, useCalibrationPlanningOverview } from "@/hooks/useCalibrationPlanning"
 import {
   CALIBRATION_MONTHS,
@@ -31,6 +34,7 @@ import {
   formatPlanningDays,
   toCalibrationPlanningPrintRows,
 } from "@/lib/calibrationPlanningReport"
+import { getMonthlyPlanningStatus } from "@/lib/monthlyPlanningCard"
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { calibrationPlanningService } from "@/services/calibrationPlanning.service"
 import type { CalibrationPlanningStatus } from "@/types/calibrationPlanning"
@@ -110,7 +114,7 @@ export function CalibrationPlanningMonthDetailsPage() {
     () => overviewQuery.data?.months.find((item) => item.month === month),
     [month, overviewQuery.data?.months]
   )
-  const completion = monthSummary?.planned ? Math.round((monthSummary.completed / monthSummary.planned) * 100) : 0
+  const pending = (monthSummary?.upcoming ?? 0) + (monthSummary?.due_soon ?? 0)
   const totalPages = Math.max(1, Math.ceil((detailsQuery.data?.total ?? 0) / PAGE_SIZE))
   const visiblePages = useMemo(() => getVisiblePages(page + 1, totalPages), [page, totalPages])
 
@@ -195,27 +199,29 @@ export function CalibrationPlanningMonthDetailsPage() {
         </div>
       </section>
 
-      <Card className="rounded-lg border-[#e1e7f0] bg-white shadow-sm">
-        <CardContent className="space-y-4 p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-medium text-[#52627d]">Monthly completion</p>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-3xl font-semibold text-[#17233b]">{overviewQuery.isLoading ? "-" : `${completion}%`}</span>
-                <span className="text-sm text-[#73819a]">{monthSummary?.completed ?? 0} of {monthSummary?.planned ?? 0} planned gauges completed</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="border-[#b8e5d5] bg-[#ecf9f3] text-[#13795b]">Completed {monthSummary?.completed ?? 0}</Badge>
-              <Badge variant="outline" className="border-[#f5d69b] bg-[#fff7e8] text-[#a65300]">Pending {(monthSummary?.upcoming ?? 0) + (monthSummary?.due_soon ?? 0)}</Badge>
-              <Badge variant="outline" className="border-[#f4c4c0] bg-[#fff1f0] text-[#b83131]">Overdue {monthSummary?.overdue ?? 0}</Badge>
-            </div>
-          </div>
-          <Progress value={completion} indicatorClassName="bg-[#1d8b68]" className="bg-[#eaf0f7]" aria-label={`${monthName} completion`} />
-        </CardContent>
-      </Card>
+      {overviewQuery.isLoading ? (
+        <MonthlyPlanningCardSkeleton variant="detailed" />
+      ) : (
+        <MonthlyPlanningCard
+          variant="detailed"
+          month={monthName}
+          year={year}
+          planned={monthSummary?.planned ?? 0}
+          completed={monthSummary?.completed ?? 0}
+          pending={pending}
+          overdue={monthSummary?.overdue ?? 0}
+          weeklyPlan={monthSummary?.weekly_plan}
+          status={getMonthlyPlanningStatus({
+            planned: monthSummary?.planned ?? 0,
+            completed: monthSummary?.completed ?? 0,
+            pending,
+            overdue: monthSummary?.overdue ?? 0,
+          })}
+          onViewPlan={() => document.getElementById("planned-gauges")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        />
+      )}
 
-      <Card className="rounded-lg border-[#e1e7f0] bg-white shadow-sm">
+      <Card id="planned-gauges" className="rounded-lg border-[#e1e7f0] bg-white shadow-sm">
         <CardHeader className="flex flex-col items-start gap-3 space-y-0 border-b border-[#edf1f6] px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <CardTitle className="text-lg">Planned gauges</CardTitle>

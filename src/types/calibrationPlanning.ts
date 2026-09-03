@@ -15,6 +15,7 @@ export type CalibrationPlanningMonth = {
   due_soon: number
   upcoming: number
   overdue: number
+  weekly_plan?: number[]
 }
 
 export type CalibrationPlanningOverview = {
