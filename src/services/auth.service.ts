@@ -18,6 +18,7 @@ export interface DecodedToken {
   role?: string
   roles: string[]
   permissions?: string[]
+  portal?: "customer" | "calibration"
   jti: string
   exp: number
 }
@@ -82,8 +83,13 @@ export const authService = {
       throw new Error("Session was created without an access token")
     }
 
-    apiService.setAuthToken(response.access_token)
     const decoded = decodeAccessToken(response.access_token)
+    if (decoded.portal !== "customer") {
+      apiService.clearLocalAuthState()
+      throw new Error("Invalid customer portal session")
+    }
+
+    apiService.setAuthToken(response.access_token)
     const user = await this.getCurrentUser()
     const context: AuthContext = {
       id: decoded.sub,
@@ -96,7 +102,7 @@ export const authService = {
   },
 
   async getCurrentUser(): Promise<User> {
-    return apiService.get<User>("auth/me", { withCredentials: true })
+    return apiService.get<User>("auth/customer/me", { withCredentials: true })
   },
 
   setAuthContext(authContext: AuthContext): void {
@@ -105,7 +111,7 @@ export const authService = {
 
   async logout(): Promise<void> {
     try {
-      await apiService.post("auth/logout", undefined, {
+      await apiService.post("auth/customer/logout", undefined, {
         withCredentials: true,
         skipAuthRefresh: true,
       } as never)

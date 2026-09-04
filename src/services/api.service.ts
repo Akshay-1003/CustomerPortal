@@ -4,6 +4,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from "axios"
+import { jwtDecode } from "jwt-decode"
 import { env } from "@/config/env"
 import { redirectToAppPath } from "@/lib/appNavigation"
 
@@ -15,6 +16,10 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & {
 type AuthBroadcastMessage =
   | { type: "access-token"; token: string }
   | { type: "signed-out" }
+
+type PortalAccessToken = {
+  portal?: string
+}
 
 const AUTH_STORAGE_KEY = "customerportal.auth-context"
 
@@ -90,7 +95,9 @@ class ApiService {
   }
 
   private isAuthenticationEndpoint(url?: string): boolean {
-    return Boolean(url && /(?:^|\/)auth\/(?:customer\/login|customer\/select-organization|refresh|logout)/.test(url))
+    return Boolean(
+      url && /(?:^|\/)auth\/(?:customer\/(?:login|select-organization|refresh|logout|me)|refresh|logout)/.test(url),
+    )
   }
 
   isTerminalRefreshFailure(error: unknown): boolean {
@@ -98,16 +105,24 @@ class ApiService {
     return status === 400 || status === 401 || status === 403
   }
 
+  private isCustomerPortalToken(token: string): boolean {
+    try {
+      return jwtDecode<PortalAccessToken>(token).portal === "customer"
+    } catch {
+      return false
+    }
+  }
+
   private async refreshAccessToken(): Promise<string> {
     if (!this.refreshPromise) {
       this.refreshPromise = this.api
-        .post<{ access_token: string }>("auth/refresh", undefined, {
+        .post<{ access_token: string }>("auth/customer/refresh", undefined, {
           skipAuthRefresh: true,
           withCredentials: true,
         } as AxiosRequestConfig)
         .then((response) => {
-          if (!response.data.access_token) {
-            throw new Error("Session renewal did not return an access token")
+          if (!response.data.access_token || !this.isCustomerPortalToken(response.data.access_token)) {
+            throw new Error("Session renewal did not return a customer portal access token")
           }
           this.setAuthToken(response.data.access_token)
           return response.data.access_token
