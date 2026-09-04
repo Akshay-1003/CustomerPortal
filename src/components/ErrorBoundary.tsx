@@ -2,6 +2,7 @@ import { Component, type ReactNode } from 'react'
 import { AlertCircle, RefreshCcw } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { recoverFromStaleAssetError } from '@/lib/staleAssetRecovery'
 
 interface Props {
   children: ReactNode
@@ -29,6 +30,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (recoverFromStaleAssetError(error)) {
+      return
+    }
+
     // Log error to error reporting service
     // eslint-disable-next-line no-console
     console.error('ErrorBoundary caught an error:', error, errorInfo)
@@ -84,5 +89,4 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children
   }
 }
-
 

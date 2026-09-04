@@ -17,7 +17,21 @@
     <title>Vikramaditya Metrology Center</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-boot-fallback" style="align-items:center;background:#f8fafc;color:#1e293b;display:flex;flex-direction:column;font-family:system-ui,sans-serif;gap:12px;justify-content:center;min-height:100vh;padding:24px;text-align:center">
+        <div aria-hidden="true" style="border:3px solid #dbeafe;border-radius:999px;border-top-color:#2563eb;height:32px;width:32px"></div>
+        <p style="margin:0">Loading application...</p>
+        <button id="app-boot-reload" type="button" onclick="window.location.reload()" style="background:#2563eb;border:0;border-radius:6px;color:#fff;cursor:pointer;display:none;font:inherit;padding:10px 16px">Reload</button>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      window.setTimeout(function () {
+        var reloadButton = document.getElementById('app-boot-reload');
+        if (reloadButton && document.getElementById('app-boot-fallback')) {
+          reloadButton.style.display = 'inline-block';
+        }
+      }, 8000);
+    </script>
   </body>
 </html>

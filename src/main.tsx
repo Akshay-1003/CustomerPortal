@@ -8,7 +8,9 @@ import { queryClient } from './lib/queryClient'
 import { AuthProvider } from './contexts/AuthContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { registerPwaServiceWorker } from './lib/registerPwaServiceWorker'
+import { installStaleAssetRecovery } from './lib/staleAssetRecovery'
 
+installStaleAssetRecovery()
 registerPwaServiceWorker()
 
 const ReactQueryDevtools = import.meta.env.DEV
