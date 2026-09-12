@@ -252,7 +252,7 @@ Current endpoint: `auth/customer/login`
 
 Full URL: `{baseURL}/auth/customer/login`
 
-Base URL: `http://98.95.117.131:5000/api/v1`
+Base URL: `https://api.metrologydesk.com/api/v1`
 
 ---
 
@@ -320,7 +320,6 @@ After successful login:
 **The login redirect and organization data flow should now work correctly! 🎉**
 
 **Check the browser console for debugging information if issues persist.**
-
 
 
 

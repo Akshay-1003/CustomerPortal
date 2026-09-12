@@ -55,7 +55,7 @@ The code has been updated to handle this issue automatically. Invalid cookies wi
 
 1. **Check API Connection**
    ```bash
-   curl http://98.95.117.131:5000/api/v1/organizations
+   curl https://api.metrologydesk.com/api/v1/organizations
    ```
    Should return JSON with organizations array
 
@@ -70,7 +70,7 @@ The code has been updated to handle this issue automatically. Invalid cookies wi
    ```
    Should contain:
    ```
-   VITE_API_BASE_URL=http://98.95.117.131:5000/api/v1
+   VITE_API_BASE_URL=https://api.metrologydesk.com/api/v1
    ```
 
 4. **Check CORS**
@@ -135,7 +135,7 @@ JWT token has expired (default: 7 days)
    ```bash
    # Replace {org_id} with your organization ID
    curl -H "Authorization: Bearer YOUR_TOKEN" \
-        http://98.95.117.131:5000/api/v1/gauge/organization/{org_id}/gauges
+        https://api.metrologydesk.com/api/v1/gauge/organization/{org_id}/gauges
    ```
 
 3. **Clear Cache and Reload**
@@ -339,7 +339,6 @@ document.cookie
 ---
 
 **Most issues can be resolved by clearing cookies and cache!** 🔄
-
 
 
 
