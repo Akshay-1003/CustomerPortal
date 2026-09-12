@@ -48,7 +48,7 @@ onSubmit() → calls login() from AuthContext
 
 ### Step 3: API Call
 ```typescript
-POST http://35.172.1.180:5000/api/v1/customer/login
+POST http://98.95.117.131:5000/api/v1/customer/login
 Body: {
   email: "user@example.com",
   password: "password123",
@@ -90,12 +90,12 @@ POST /customer/login
 
 ### Base URL
 ```
-http://35.172.1.180:5000/api/v1
+http://98.95.117.131:5000/api/v1
 ```
 
 ### Full URL
 ```
-http://35.172.1.180:5000/api/v1/customer/login
+http://98.95.117.131:5000/api/v1/customer/login
 ```
 
 ### Request Body
@@ -257,7 +257,6 @@ The login is now fully integrated with the real API endpoint. Users can authenti
 ---
 
 **All mock login code has been removed and replaced with real API integration! 🎉**
-
 
 
 

@@ -305,7 +305,7 @@ xl:  1280px /* Extra large devices */
 
 #### Base URL
 ```
-http://35.172.1.180:5000/api/v1
+http://98.95.117.131:5000/api/v1
 ```
 
 #### Integrated Endpoints
@@ -550,7 +550,7 @@ npm run build
 
 **Required `.env` file:**
 ```env
-VITE_API_BASE_URL=http://35.172.1.180:5000/api/v1
+VITE_API_BASE_URL=http://98.95.117.131:5000/api/v1
 ```
 
 **Location:** `/Users/akshayprakashpatil/project/cportal/customerportal/.env`
@@ -690,7 +690,6 @@ The Calibration Portal has been successfully transformed into a **professional, 
 ---
 
 **Built with excellence for industrial monitoring and operations.**
-
 
 
 

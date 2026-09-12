@@ -17,12 +17,12 @@ cd /Users/akshayprakashpatil/project/cportal/customerportal
 
 Create `.env` file with this content:
 ```env
-VITE_API_BASE_URL=http://35.172.1.180:5000/api/v1
+VITE_API_BASE_URL=http://98.95.117.131:5000/api/v1
 ```
 
 **Quick command:**
 ```bash
-echo "VITE_API_BASE_URL=http://35.172.1.180:5000/api/v1" > .env
+echo "VITE_API_BASE_URL=http://98.95.117.131:5000/api/v1" > .env
 ```
 
 ### 3. Install & Run
@@ -102,7 +102,7 @@ npm run dev -- --port 3000
 cat .env
 
 # Should output:
-# VITE_API_BASE_URL=http://35.172.1.180:5000/api/v1
+# VITE_API_BASE_URL=http://98.95.117.131:5000/api/v1
 ```
 
 **Issue: Organizations not loading**
@@ -121,7 +121,6 @@ cat .env
 ---
 
 **That's it! You're ready to go! 🎉**
-
 
 
 

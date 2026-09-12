@@ -137,7 +137,7 @@ customerportal/
    
    Create a `.env` file in the root directory:
    ```env
-   VITE_API_BASE_URL=http://35.172.1.180:5000/api/v1
+   VITE_API_BASE_URL=http://98.95.117.131:5000/api/v1
    ```
 
 4. **Start the development server**
@@ -166,7 +166,7 @@ npm run preview
 
 ### Base URL
 ```
-http://35.172.1.180:5000/api/v1
+http://98.95.117.131:5000/api/v1
 ```
 
 ### Endpoints
@@ -302,7 +302,7 @@ import { type MyType } from './types'
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VITE_API_BASE_URL` | Backend API base URL | `http://35.172.1.180:5000/api/v1` |
+| `VITE_API_BASE_URL` | Backend API base URL | `http://98.95.117.131:5000/api/v1` |
 
 ## 🚀 Deployment
 

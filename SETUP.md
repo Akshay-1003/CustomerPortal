@@ -40,7 +40,7 @@ This will install all required packages including:
 Create a `.env` file in the project root (`customerportal/.env`):
 
 ```env
-VITE_API_BASE_URL=http://35.172.1.180:5000/api/v1
+VITE_API_BASE_URL=http://98.95.117.131:5000/api/v1
 ```
 
 > **Note:** The `.env` file is gitignored for security. Use `.env.example` as a template.
@@ -109,7 +109,7 @@ You should see the **Login Page**.
 ### Get Organization List
 The login page will automatically fetch organizations from:
 ```
-GET http://35.172.1.180:5000/api/v1/organizations
+GET http://98.95.117.131:5000/api/v1/organizations
 ```
 
 ### Login Credentials
@@ -183,7 +183,7 @@ Run ESLint to check code quality
 1. Check if backend API is running
 2. Verify `VITE_API_BASE_URL` in `.env`
 3. Check browser console for CORS errors
-4. Test API directly: `curl http://35.172.1.180:5000/api/v1/organizations`
+4. Test API directly: `curl http://98.95.117.131:5000/api/v1/organizations`
 
 ### Issue: Build fails with TypeScript errors
 **Solution:**
@@ -278,7 +278,6 @@ Before starting development, ensure:
 ---
 
 **Ready to build! 🚀**
-
 
 
 

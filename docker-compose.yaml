@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://35.172.1.180:5000/api/v1}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://98.95.117.131:5000/api/v1}
         VITE_API_REQUEST_TIMEOUT_MS: ${VITE_API_REQUEST_TIMEOUT_MS:-20000}
     ports:
       - "${HOST_PORT:-5174}:80"
