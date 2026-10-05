@@ -1,4 +1,5 @@
 import { apiService } from "./api.service"
+import { authService } from "./auth.service"
 import type { CertificateType, Gauge, GaugeMasterOption } from "@/types/api"
 
 function asArray<T>(payload: unknown): T[] {
@@ -150,23 +151,43 @@ export const mastersService = {
   },
 
   async getHistoryCardFormatNumber(): Promise<string | null> {
-    const response = await apiService.get<unknown>("/history-card/format-number")
-    if (typeof response === "string") return response
-    if (response && typeof response === "object") {
-      const obj = response as Record<string, unknown>
-      const value = obj.history_card_format_number ?? obj.format_number ?? obj.value
-      if (typeof value === "string") return value
-    }
-    return null
+    const clientOrgId = authService.getOrganizationId()
+    if (!clientOrgId) return null
+
+    const response = await apiService.get<unknown>("/format-numbers/active", {
+      params: { formatType: "history_card", clientOrgId },
+    })
+    if (!response || typeof response !== "object") return null
+    const value = (response as Record<string, unknown>).formatNumber
+    return typeof value === "string" ? value : null
   },
 
   async upsertHistoryCardFormatNumber(value: string): Promise<void> {
-    const payload = { history_card_format_number: value }
+    const clientOrgId = authService.getOrganizationId()
+    if (!clientOrgId) throw new Error("Organization is required")
+
+    let existing: { id?: string } | null = null
     try {
-      await apiService.put("/history-card/format-number", payload)
-      return
+      existing = await apiService.get<{ id?: string }>("/format-numbers/active", {
+        params: { formatType: "history_card", clientOrgId },
+      })
     } catch {
-      await apiService.post("/history-card/format-number", payload)
+      // A missing active record is created below.
     }
+
+    if (existing?.id) {
+      await apiService.patch(`/format-numbers/${existing.id}`, {
+        formatNumber: value,
+        isActive: true,
+      })
+      return
+    }
+
+    await apiService.post("/format-numbers", {
+      formatNumber: value,
+      formatType: "history_card",
+      isActive: true,
+      clientOrgId,
+    })
   },
 }

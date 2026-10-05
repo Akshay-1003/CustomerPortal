@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,10 +12,9 @@ type FormatNumberFormValues = {
   history_card_format_number: string
 }
 
-const STORAGE_KEY = "history_card_format_number"
-
 export function FormatNumberPage() {
   const [isSaving, setIsSaving] = useState(false)
+  const queryClient = useQueryClient()
   const form = useForm<FormatNumberFormValues>({
     defaultValues: { history_card_format_number: "" },
   })
@@ -24,12 +23,10 @@ export function FormatNumberPage() {
     queryKey: ["history-card-format-number"],
     queryFn: async () => {
       try {
-        const fromApi = await mastersService.getHistoryCardFormatNumber()
-        if (fromApi) return fromApi
-      } catch {
-        // fall back to local storage
+        return (await mastersService.getHistoryCardFormatNumber()) || ""
+      } catch (error) {
+        throw error
       }
-      return localStorage.getItem(STORAGE_KEY) || ""
     },
   })
 
@@ -49,11 +46,10 @@ export function FormatNumberPage() {
     setIsSaving(true)
     try {
       await mastersService.upsertHistoryCardFormatNumber(value)
-      localStorage.setItem(STORAGE_KEY, value)
       toast.success("History Card Format Number updated")
+      await queryClient.invalidateQueries({ queryKey: ["history-card-format-number"] })
     } catch (error: any) {
-      localStorage.setItem(STORAGE_KEY, value)
-      toast.success("Saved locally. API endpoint was unavailable.")
+      toast.error(error?.message || "Unable to save the format number")
       console.error("Format number save error:", error)
     } finally {
       setIsSaving(false)
@@ -100,4 +96,3 @@ export function FormatNumberPage() {
 }
 
 export default FormatNumberPage
-

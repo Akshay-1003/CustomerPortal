@@ -429,7 +429,21 @@ export function HistoryCardPage() {
           </div>
           <div className="max-w-full rounded-xl border border-border/60 bg-background overflow-hidden">
             <div className="relative w-full max-w-full overflow-x-auto">
-              <Table className="w-max min-w-[2200px]">
+              <Table className="w-full min-w-[1250px] table-fixed">
+                <colgroup>
+                  <col className="w-[44px]" />
+                  <col className="w-[64px]" />
+                  <col className="w-[170px]" />
+                  <col className="w-[190px]" />
+                  <col className="w-[100px]" />
+                  <col className="w-[180px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[90px]" />
+                  <col className="w-[110px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[150px]" />
+                  <col className="w-[92px]" />
+                </colgroup>
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
                     <TableHead className="sticky top-0 z-10 w-[44px] whitespace-nowrap bg-muted/30">
@@ -459,7 +473,7 @@ export function HistoryCardPage() {
                 <TableBody>
                   {isTableLoading ? (
                     <TableRow>
-                      <TableCell colSpan={15} className="h-24 text-center">
+                      <TableCell colSpan={12} className="h-24 text-center">
                         <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                           <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-primary"></div>
                           Loading gauges...

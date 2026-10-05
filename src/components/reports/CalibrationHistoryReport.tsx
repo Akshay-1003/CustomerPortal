@@ -31,6 +31,9 @@ type ReportPage = {
 type CalibrationHistoryReportProps = {
   gauge?: Gauge
   history?: unknown
+  companyName?: string
+  companyAddress?: string
+  formatNumber?: string | null
 }
 
 type LabelValue = {
@@ -52,37 +55,6 @@ const FIRST_PAGE_ROW_SPACE_PX =
   PRINTABLE_HEIGHT_PX - FULL_HEADER_HEIGHT_PX - FOOTER_HEIGHT_PX - TABLE_HEADER_HEIGHT_PX
 const COMPACT_PAGE_ROW_SPACE_PX =
   PRINTABLE_HEIGHT_PX - COMPACT_HEADER_HEIGHT_PX - FOOTER_HEIGHT_PX - TABLE_HEADER_HEIGHT_PX
-
-const COMPANY = {
-  name: "CALIBRATION SERVICES",
-  address: "123 Industrial Avenue, Manufacturing District",
-  contact: "Tel: +1-555-0123 | Email: calibration@company.com",
-}
-
-function readSpec(specifications: Record<string, unknown> | undefined, keys: string[], fallback = "N/A"): string {
-  if (!specifications) return fallback
-  for (const key of keys) {
-    const value = specifications[key]
-    if (value === undefined || value === null) continue
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-      const normalized = String(value).trim()
-      if (normalized) return normalized
-      continue
-    }
-    if (typeof value === "object") {
-      const nestedRecord = value as {
-        value?: string | number | boolean | null
-        label?: string | number | boolean | null
-        text?: string | number | boolean | null
-      }
-      const nestedValue = nestedRecord.value || nestedRecord.label || nestedRecord.text
-      if (nestedValue !== undefined && nestedValue !== null && String(nestedValue).trim()) {
-        return String(nestedValue).trim()
-      }
-    }
-  }
-  return fallback
-}
 
 function formatDate(value?: string): string {
   if (!value) return "N/A"
@@ -151,7 +123,7 @@ function toCalibrationRows(history: unknown): CalibrationRow[] {
     }
     return {
       serialNo: index + 1,
-      labId: record.inward_gauge_lab_id || `LAB-${index + 1}`,
+      labId: record.inward_gauge_lab_id || "N/A",
       certificateNo: raw.certificate_no || raw.certificate_number || "N/A",
       certificateUrl: raw.certificate_url,
       calibrationDate: formatDate(record.certificate_issue_date || record.date),
@@ -266,10 +238,15 @@ function renderStatusCell(status: string) {
   )
 }
 
-export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryReportProps) {
+export function CalibrationHistoryReport({
+  gauge,
+  history,
+  companyName,
+  companyAddress,
+  formatNumber,
+}: CalibrationHistoryReportProps) {
   const rows = useMemo(() => toCalibrationRows(history), [history])
   const pages = useMemo(() => paginateRows(rows), [rows])
-  const gaugeDetail = gauge as Gauge & { inward_gauge_lab_id?: string }
 
   const specifications = useMemo(
     () => (gauge?.specifications || {}) as Record<string, unknown>,
@@ -289,16 +266,8 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
   )
   const hasAcceptanceLimit = acceptanceRows.length > 0
 
-  const footerMeta = {
-    documentCode: readSpec(gauge?.specifications, ["document_code", "doc_code"], "DOC-GHC-001"),
-    revisionNo: readSpec(gauge?.specifications, ["revision_no", "revision"], "00"),
-    revisionDate: formatDate(readSpec(gauge?.specifications, ["revision_date"], "")),
-    preparedBy: readSpec(gauge?.specifications, ["prepared_by"], "Calibration Department"),
-    approvedBy: readSpec(gauge?.specifications, ["approved_by"], "Quality Head"),
-  }
   const topInfo: LabelValue[] = [
     { label: "Identification No", value: gauge?.identification_number || "N/A" },
-    { label: "Lab Id", value: gaugeDetail?.inward_gauge_lab_id || "N/A" },
     { label: "Make", value: gauge?.make || "N/A" },
     { label: "Serial No", value: gauge?.manf_serial_number || "N/A" },
   ]
@@ -384,9 +353,8 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             <header className="chr-header-full">
               <div className="chr-headline-row">
                 <div className="chr-company-head">
-                  <h2>{gauge?.client_organization || COMPANY.name}</h2>
-                  <p>{COMPANY.address}</p>
-                  <p>{COMPANY.contact}</p>
+                  <h2>{companyName || gauge?.client_organization || "Organization"}</h2>
+                  <p>{companyAddress || "Address not available"}</p>
                 </div>
                 <div className="chr-doc-title-inline">HISTORY CARD (Gauge and Instrument)</div>
               </div>
@@ -416,7 +384,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
             </header>
           ) : (
             <header className="chr-header-compact">
-              <div className="chr-company-compact">{gauge?.client_organization || COMPANY.name}</div>
+              <div className="chr-company-compact">{companyName || gauge?.client_organization || "Organization"}</div>
               <div className="chr-title-compact">HISTORY CARD (Gauge and Instrument)</div>
               <div className="chr-compact-meta">
                 <span>Gauge: {gauge?.identification_number || "N/A"}</span>
@@ -433,11 +401,7 @@ export function CalibrationHistoryReport({ gauge, history }: CalibrationHistoryR
 
           <footer className="chr-footer">
             <div className="chr-footer-left">
-              <span>Document Code: {footerMeta.documentCode}</span>
-              <span>Revision No: {footerMeta.revisionNo}</span>
-              <span>Revision Date: {footerMeta.revisionDate}</span>
-              <span>Prepared By: {footerMeta.preparedBy}</span>
-              <span>Approved By: {footerMeta.approvedBy}</span>
+              <span>Format Number: {formatNumber || "Not configured"}</span>
             </div>
             <div className="chr-footer-right">Page {pageNumber} of {totalPages}</div>
           </footer>
