@@ -429,31 +429,17 @@ export function HistoryCardPage() {
           </div>
           <div className="max-w-full rounded-xl border border-border/60 bg-background overflow-hidden">
             <div className="relative w-full max-w-full overflow-x-auto">
-              <Table className="w-full min-w-[1250px] table-fixed">
-                <colgroup>
-                  <col className="w-[44px]" />
-                  <col className="w-[64px]" />
-                  <col className="w-[170px]" />
-                  <col className="w-[190px]" />
-                  <col className="w-[100px]" />
-                  <col className="w-[180px]" />
-                  <col className="w-[120px]" />
-                  <col className="w-[90px]" />
-                  <col className="w-[110px]" />
-                  <col className="w-[120px]" />
-                  <col className="w-[150px]" />
-                  <col className="w-[92px]" />
-                </colgroup>
+              <Table className="w-max min-w-full table-auto">
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="sticky top-0 z-10 w-[44px] whitespace-nowrap bg-muted/30">
+                    <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">
                       <Checkbox
                         checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
                         onCheckedChange={(value) => toggleSelectAllFiltered(value === true)}
                         aria-label="Select all filtered rows"
                       />
                     </TableHead>
-                    <TableHead className="sticky top-0 z-10 w-[72px] whitespace-nowrap bg-muted/30">ID</TableHead>
+                    <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">ID</TableHead>
                     {/* <TableHead className="sticky top-0 z-10 w-[220px] whitespace-nowrap bg-muted/30">Company Name</TableHead> */}
                     <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Gauge</TableHead>
                     <TableHead className="sticky top-0 z-10 whitespace-nowrap bg-muted/30">Identification</TableHead>
@@ -486,14 +472,14 @@ export function HistoryCardPage() {
                       const specification = formatSpecificationForPrint(gauge.specifications, gauge.unit || "mm")
                       return (
                         <TableRow key={gauge.id} className="hover:bg-muted/20">
-                          <TableCell className="w-[44px]">
+                          <TableCell className="whitespace-nowrap">
                             <Checkbox
                               checked={selectedIds.has(gauge.id)}
                               onCheckedChange={(value) => toggleRowSelection(gauge.id, value === true)}
                               aria-label={`Select ${gauge.identification_number || gauge.id}`}
                             />
                           </TableCell>
-                          <TableCell className="w-[72px] whitespace-nowrap">
+                          <TableCell className="whitespace-nowrap">
                             {rowId}
                           </TableCell>
                           {/* <TableCell className="w-[220px] whitespace-nowrap" title={gauge.client_organization || "N/A"}>
