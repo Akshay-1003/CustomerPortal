@@ -157,6 +157,7 @@ export default function GaugeListPage() {
       <GaugeListTable
         ref={tableRef}
         gauges={paginatedGauges}
+        exportGauges={filteredGauges}
         currentPage={currentPage}
         setCurrentPage={handlePageChange}
         itemsPerPage={itemsPerPage}

@@ -21,6 +21,7 @@ import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationP
 
 interface Props {
     gauges: HistoryCardGauge[]
+    exportGauges?: HistoryCardGauge[]
     currentPage: number
     setCurrentPage: (page: number) => void
     itemsPerPage: number
@@ -36,6 +37,7 @@ const GaugeListTableComponent = forwardRef<{
     onOpenPrintPreview: () => void
 	}, Props>(function GaugeListTable({
     gauges,
+    exportGauges = gauges,
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -55,7 +57,10 @@ const GaugeListTableComponent = forwardRef<{
 	    const allSelected = useMemo(() => gauges.length > 0 && selectedIds.size === gauges.length, [gauges.length, selectedIds.size])
 	    const someSelected = useMemo(() => selectedIds.size > 0 && !allSelected, [selectedIds.size, allSelected])
 	    const selectedRows = useMemo(() => gauges.filter((g) => selectedIds.has(g.id)), [gauges, selectedIds])
-	    const printSourceRows = useMemo(() => selectedRows.length > 0 ? selectedRows : gauges, [selectedRows, gauges])
+    const printSourceRows = useMemo(
+        () => selectedRows.length > 0 ? selectedRows : exportGauges,
+        [selectedRows, exportGauges]
+    )
         const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo({
             fallbackName: printSourceRows[0]?.client_organization || "Company",
         })
