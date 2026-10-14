@@ -39,6 +39,18 @@ const GAUGE_LIST_EXPORT_COLUMNS: ExportColumn<GaugeListPrintRow>[] = [
   { key: "remark", header: "Remark", accessor: "remark", width: 14, pdfWidth: 14 },
 ]
 
+const GAUGE_LIST_PDF_COLUMNS: ExportColumn<GaugeListPrintRow>[] = [
+  GAUGE_LIST_EXPORT_COLUMNS[0],
+  GAUGE_LIST_EXPORT_COLUMNS[1],
+  { key: "make", header: "Make", accessor: "make", width: 16, pdfWidth: 16 },
+  GAUGE_LIST_EXPORT_COLUMNS[2],
+  GAUGE_LIST_EXPORT_COLUMNS[3],
+  GAUGE_LIST_EXPORT_COLUMNS[4],
+  GAUGE_LIST_EXPORT_COLUMNS[5],
+  GAUGE_LIST_EXPORT_COLUMNS[7],
+  GAUGE_LIST_EXPORT_COLUMNS[6],
+]
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -54,11 +66,12 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
       (row) => `
         <tr>
           <td class="sn-col">${row.serialNo}</td>
+          <td>${escapeHtml(row.name)}</td>
+          <td>${escapeHtml(row.make)}</td>
           <td>${escapeHtml(row.identification)}</td>
           <td>${escapeHtml(row.specifications)}</td>
           <td>${escapeHtml(row.serial)}</td>
           <td>${escapeHtml(row.frequency)}</td>
-          <td>${escapeHtml(row.make)}</td>
           <td>${escapeHtml(row.remark)}</td>
         </tr>
       `
@@ -105,12 +118,12 @@ function buildPrintHtml(rows: GaugeListPrintRow[], companyName: string, companyA
             <tr>
               <th class="sn-col">SN</th>
               <th>Gauge Name</th>
+              <th>Make</th>
               <th>Identification</th>
               <th>Specification</th>
               <th>Serial</th>
               <th>Cal. Freq.</th>
               <th>Remark</th>
-              <th>Make</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
@@ -166,7 +179,7 @@ export function GaugeListPrintPreview({
             companyName,
             companyAddress,
             rows,
-            columns: GAUGE_LIST_EXPORT_COLUMNS,
+            columns: GAUGE_LIST_PDF_COLUMNS,
           })
         : exportSpreadsheetData({
             fileName,
@@ -215,12 +228,12 @@ export function GaugeListPrintPreview({
                     <th className="gl-col-sn">SN</th>
                     <th>Client Organization</th>
                     <th>Gauge Name</th>
+                    <th>Make</th>
                     <th>Identification</th>
                     <th>Specification</th>
                     <th>Serial</th>
                     <th>Calibration Frequency</th>
                     <th>Remark</th>
-                    <th>Make</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -229,12 +242,12 @@ export function GaugeListPrintPreview({
                       <td>{row.serialNo}</td>
                       <td>{row.clientOrganization}</td>
                       <td>{row.name}</td>
+                      <td>{row.make}</td>
                       <td>{row.identification}</td>
                       <td>{row.specifications}</td>
                       <td>{row.serial}</td>
                       <td>{row.frequency}</td>
                       <td>{row.remark}</td>
-                      <td>{row.make}</td>
                     </tr>
                   ))}
                 </tbody>
