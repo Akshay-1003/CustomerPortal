@@ -37,6 +37,7 @@ export interface GaugeHistory {
   inward_gauge_lab_id?: string
   status?: string
   gauge_condition?: string
+  through?: string | null
 }
 
 export interface LoginRequest {

@@ -19,6 +19,8 @@ import { CalibrationMonthTable } from "./CalibrationMonthTable"
 import { DailyCalibrationAnalysisSection } from "./DailyCalibrationAnalysisSection"
 import { MonthlyPlannedChart } from "./MonthlyPlannedChart"
 import { MonthlyStatusGroupedChart } from "./MonthlyStatusGroupedChart"
+import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 function getErrorMessage(error: unknown) {
   if (error instanceof AxiosError) {
@@ -75,9 +77,10 @@ export function MonthlyCalibrationDashboard() {
   const [selectedMonth, setSelectedMonth] = useState<NormalizedMonthlyCalibrationDatum | null>(null)
   const [selectedDailyMonth, setSelectedDailyMonth] = useState(currentMonth)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const throughFilter = useHemdeepThroughFilter()
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useMonthlyCalibrationDashboard(selectedYear)
+    useMonthlyCalibrationDashboard(selectedYear, throughFilter.apiGroup)
 
   const yearOptions = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => currentYear - 3 + index)
@@ -117,6 +120,7 @@ export function MonthlyCalibrationDashboard() {
               </p>
             </div>
           </div>
+          {throughFilter.enabled && <ThroughGroupFilter value={throughFilter.group} onChange={throughFilter.setGroup} />}
         </CardContent>
       </Card>
 
@@ -185,6 +189,7 @@ export function MonthlyCalibrationDashboard() {
       <DailyCalibrationAnalysisSection
         selectedYear={selectedYear}
         selectedMonth={selectedDailyMonth}
+        throughGroup={throughFilter.apiGroup}
         onMonthChange={setSelectedDailyMonth}
       />
 

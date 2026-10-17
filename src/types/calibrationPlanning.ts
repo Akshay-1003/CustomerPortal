@@ -62,4 +62,5 @@ export type CalibrationPlanningDetailParams = {
   sortDirection?: "asc" | "desc"
   page?: number
   limit?: number
+  throughGroup?: "hemdeep" | "other"
 }

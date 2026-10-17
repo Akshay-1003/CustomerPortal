@@ -1,5 +1,6 @@
 import { apiService } from './api.service'
 import { type Gauge, type GaugeHistory } from '@/types/api'
+import type { ThroughGroup } from '@/hooks/useHemdeepThroughFilter'
 
 type GaugeHistoryResponse =
   | GaugeHistory[]
@@ -31,7 +32,7 @@ function normalizeGaugeHistoryResponse(payload: GaugeHistoryResponse | null | un
 }
 
 export const gaugeService = {
-  async getGaugesByOrganization(organizationId: string, page: number = 1, limit: number = 10, search?: string): Promise<{
+  async getGaugesByOrganization(organizationId: string, page: number = 1, limit: number = 10, search?: string, throughGroup?: Exclude<ThroughGroup, 'all'>): Promise<{
     data: Gauge[],
     total: number,
     page: number,
@@ -50,6 +51,7 @@ export const gaugeService = {
     if (search) {
       params.append('search', search)
     }
+    if (throughGroup) params.append('through_group', throughGroup)
     
     return await apiService.get<{
       data: Gauge[],
@@ -59,13 +61,14 @@ export const gaugeService = {
     }>(`/gauge/organization/${organizationId}/gauges?${params}`)
   },
 
-  async getGaugeHistory(gaugeId: string): Promise<GaugeHistory[]> {
+  async getGaugeHistory(gaugeId: string, throughGroup?: Exclude<ThroughGroup, 'all'>): Promise<GaugeHistory[]> {
     // Real API call - Get history for a specific gauge
     if (!gaugeId) {
       throw new Error('Gauge ID is required')
     }
 
-    const response = await apiService.get<GaugeHistoryResponse>(`/gauge/${gaugeId}/history`)
+    const params = throughGroup ? `?through_group=${throughGroup}` : ""
+    const response = await apiService.get<GaugeHistoryResponse>(`/gauge/${gaugeId}/history${params}`)
     return normalizeGaugeHistoryResponse(response)
   },
 

@@ -12,6 +12,8 @@ import { authService } from "@/services/auth.service"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 import { useAuth } from "@/hooks/useAuth"
 import { canEditCustomerModule } from "@/lib/permissions"
+import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 const ITEMS_PER_PAGE = 10
 
@@ -34,8 +36,9 @@ export default function GaugeListPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const debouncedSearch = useDebouncedValue(searchQuery, 300)
   const tableRef = useRef<{ onOpenPrintPreview: () => void }>(null)
+  const throughFilter = useHemdeepThroughFilter()
 
-  const { data: allGauges = [], isLoading, isFetching, isError, error, refetch } = useAllGauges()
+  const { data: allGauges = [], isLoading, isFetching, isError, error, refetch } = useAllGauges(throughFilter.apiGroup)
 
   const filteredGauges = useMemo(() => {
     const normalizedSearch = debouncedSearch.trim().toLowerCase()
@@ -144,6 +147,13 @@ export default function GaugeListPage() {
           value={searchQuery}
           onChange={handleSearchChange}
         />
+
+        {throughFilter.enabled && (
+          <ThroughGroupFilter value={throughFilter.group} onChange={(value) => {
+            throughFilter.setGroup(value)
+            setCurrentPage(1)
+          }} />
+        )}
 
         <Button variant="outline" onClick={() => refetch()}>
           <RefreshCw className="mr-2 h-4 w-4" />

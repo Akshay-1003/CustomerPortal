@@ -7,11 +7,14 @@ import { CalibrationHistoryReport } from "@/components/reports/CalibrationHistor
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { mastersService } from "@/services/masters.service"
 import { authService } from "@/services/auth.service"
+import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 export function HistoryCardDetailPage() {
   const { id } = useParams()
   const { data: gauge, isLoading: gaugeLoading } = useGaugeDetail(id as string)
-  const { data: gaugeHistory, isLoading: historyLoading } = useGaugeHistory(id as string)
+  const throughFilter = useHemdeepThroughFilter()
+  const { data: gaugeHistory, isLoading: historyLoading } = useGaugeHistory(id as string, throughFilter.apiGroup)
   const { organizationName, organizationAddress } = useCurrentOrganizationPrintInfo()
   const organizationId = authService.getOrganizationId()
   const { data: formatNumber } = useQuery({
@@ -39,6 +42,9 @@ export function HistoryCardDetailPage() {
 
   return (
     <div className="w-full">
+      {throughFilter.enabled && <div className="mb-3 flex justify-end">
+        <ThroughGroupFilter value={throughFilter.group} onChange={throughFilter.setGroup} />
+      </div>}
       <CalibrationHistoryReport
         gauge={gauge}
         history={gaugeHistory}

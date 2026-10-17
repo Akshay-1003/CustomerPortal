@@ -38,6 +38,8 @@ import { getMonthlyPlanningStatus } from "@/lib/monthlyPlanningCard"
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { calibrationPlanningService } from "@/services/calibrationPlanning.service"
 import type { CalibrationPlanningStatus } from "@/types/calibrationPlanning"
+import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 const PAGE_SIZE = 25
 
@@ -96,7 +98,8 @@ export function CalibrationPlanningMonthDetailsPage() {
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [exportRows, setExportRows] = useState<CalibrationDueReportPrintRow[]>([])
   const [isPreparingExport, setIsPreparingExport] = useState(false)
-  const overviewQuery = useCalibrationPlanningOverview(year)
+  const throughFilter = useHemdeepThroughFilter()
+  const overviewQuery = useCalibrationPlanningOverview(year, throughFilter.apiGroup)
   const detailsQuery = useCalibrationPlanningDetails(
     {
       year,
@@ -107,7 +110,8 @@ export function CalibrationPlanningMonthDetailsPage() {
       page,
       limit: PAGE_SIZE,
     },
-    validRoute
+    validRoute,
+    throughFilter.apiGroup
   )
 
   const monthSummary = useMemo(
@@ -128,6 +132,7 @@ export function CalibrationPlanningMonthDetailsPage() {
         status: status === "all" ? undefined : status,
         sortBy,
         limit: 500,
+        throughGroup: throughFilter.apiGroup,
       })
       if (response.data.length === 0) {
         toast.error("No gauges are available for this export.")
@@ -244,6 +249,10 @@ export function CalibrationPlanningMonthDetailsPage() {
                 }}
               />
             </div>
+            {throughFilter.enabled && <ThroughGroupFilter value={throughFilter.group} onChange={(value) => {
+              throughFilter.setGroup(value)
+              setPage(0)
+            }} />}
             <Select value={status} onValueChange={(value) => {
               setStatus(value as CalibrationPlanningStatus | "all")
               setPage(0)

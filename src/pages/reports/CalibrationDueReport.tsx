@@ -27,6 +27,8 @@ import { getMonthlyPlanningStatus, type MonthlyPlanningCardStatus } from "@/lib/
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { calibrationPlanningService } from "@/services/calibrationPlanning.service"
 import type { CalibrationPlanningMonth } from "@/types/calibrationPlanning"
+import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 type SummaryCard = {
   label: string
@@ -77,7 +79,8 @@ export function CalibrationDueReportPage() {
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [exportRows, setExportRows] = useState<CalibrationDueReportPrintRow[]>([])
   const [isPreparingExport, setIsPreparingExport] = useState(false)
-  const { data, isLoading, isFetching, isError, error, refetch } = useCalibrationPlanningOverview(selectedYear)
+  const throughFilter = useHemdeepThroughFilter()
+  const { data, isLoading, isFetching, isError, error, refetch } = useCalibrationPlanningOverview(selectedYear, throughFilter.apiGroup)
 
   const yearOptions = useMemo(
     () => Array.from({ length: 9 }, (_, index) => currentYear - 4 + index),
@@ -102,7 +105,7 @@ export function CalibrationDueReportPage() {
   const handleAnnualExport = async () => {
     setIsPreparingExport(true)
     try {
-      const response = await calibrationPlanningService.getDetails({ year: selectedYear, limit: 500 })
+      const response = await calibrationPlanningService.getDetails({ year: selectedYear, limit: 500, throughGroup: throughFilter.apiGroup })
       if (response.data.length === 0) {
         toast.error("No gauges are available for this export.")
         return
@@ -142,6 +145,7 @@ export function CalibrationDueReportPage() {
           <p className="mt-1 text-sm text-[#6b7a92]">Annual workload, completion progress, and calibration exceptions in one view.</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
+          {throughFilter.enabled && <ThroughGroupFilter value={throughFilter.group} onChange={throughFilter.setGroup} />}
           <Select value={String(selectedYear)} onValueChange={handleYearChange}>
             <SelectTrigger aria-label="Planning year" className="w-[148px] border-[#d8e0ec] bg-white shadow-none">
               <SelectValue />

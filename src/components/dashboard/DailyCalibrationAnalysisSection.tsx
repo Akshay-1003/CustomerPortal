@@ -46,6 +46,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useDailyCalibrationDashboard } from "@/hooks/useDailyCalibrationDashboard"
+import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
 import {
   calculateDailyTotals,
   DASHBOARD_MONTH_OPTIONS,
@@ -56,6 +57,7 @@ import { CALIBRATION_CHART_COLORS, formatDashboardNumber } from "@/lib/monthlyCa
 interface DailyCalibrationAnalysisSectionProps {
   selectedYear: number
   selectedMonth: number
+  throughGroup?: Exclude<ThroughGroup, "all">
   onMonthChange: (month: number) => void
 }
 
@@ -99,6 +101,7 @@ function DailySectionSkeleton() {
 export function DailyCalibrationAnalysisSection({
   selectedYear,
   selectedMonth,
+  throughGroup,
   onMonthChange,
 }: DailyCalibrationAnalysisSectionProps) {
   const {
@@ -108,7 +111,7 @@ export function DailyCalibrationAnalysisSection({
     isError,
     error,
     refetch,
-  } = useDailyCalibrationDashboard(selectedYear, selectedMonth)
+  } = useDailyCalibrationDashboard(selectedYear, selectedMonth, throughGroup)
 
   const dailyData = useMemo(() => normalizeDailyCalibrationResponse(data), [data])
   const totals = useMemo(() => calculateDailyTotals(dailyData), [dailyData])

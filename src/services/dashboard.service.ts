@@ -4,9 +4,10 @@ import type {
   DailyCalibrationApiResponse,
   MonthlyCalibrationApiResponse,
 } from "@/types/dashboard"
+import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
 
 export const dashboardService = {
-  async getMonthlyCalibration(params: { year: number }): Promise<MonthlyCalibrationApiResponse> {
+  async getMonthlyCalibration(params: { year: number; throughGroup?: Exclude<ThroughGroup, "all"> }): Promise<MonthlyCalibrationApiResponse> {
     const clientOrgId = authService.getOrganizationId()
 
     return apiService.get<MonthlyCalibrationApiResponse>(
@@ -15,6 +16,7 @@ export const dashboardService = {
         params: {
           year: params.year,
           client_org_id: clientOrgId || undefined,
+          through_group: params.throughGroup,
         },
       }
     )
@@ -23,6 +25,7 @@ export const dashboardService = {
   async getDailyCalibration(params: {
     year: number
     month: number
+    throughGroup?: Exclude<ThroughGroup, "all">
   }): Promise<DailyCalibrationApiResponse> {
     const clientOrgId = authService.getOrganizationId()
 
@@ -33,6 +36,7 @@ export const dashboardService = {
           year: params.year,
           month: params.month,
           client_org_id: clientOrgId || undefined,
+          through_group: params.throughGroup,
         },
       }
     )

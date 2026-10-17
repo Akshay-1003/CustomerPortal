@@ -2,16 +2,17 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { gaugeService } from '@/services/gauge.service'
 import { authService } from '@/services/auth.service'
 import type { Gauge } from '@/types/api'
+import type { ThroughGroup } from '@/hooks/useHemdeepThroughFilter'
 
 const BULK_GAUGE_LIMIT = 200
 
-async function fetchAllGaugesByOrganization(organizationId: string): Promise<Gauge[]> {
+async function fetchAllGaugesByOrganization(organizationId: string, throughGroup?: Exclude<ThroughGroup, 'all'>): Promise<Gauge[]> {
   let page = 1
   let total = Number.POSITIVE_INFINITY
   const allGauges: Gauge[] = []
 
   while (allGauges.length < total) {
-    const response = await gaugeService.getGaugesByOrganization(organizationId, page, BULK_GAUGE_LIMIT)
+    const response = await gaugeService.getGaugesByOrganization(organizationId, page, BULK_GAUGE_LIMIT, undefined, throughGroup)
     const items = Array.isArray(response.data) ? response.data : []
 
     if (items.length === 0) {
@@ -57,16 +58,16 @@ export function useGauges(page: number = 1, limit: number = 10, search?: string)
   })
 }
 
-export function useAllGauges() {
+export function useAllGauges(throughGroup?: Exclude<ThroughGroup, 'all'>) {
   const organizationId = authService.getOrganizationId()
 
   return useQuery({
-    queryKey: ['gauges-all', organizationId],
+    queryKey: ['gauges-all', organizationId, throughGroup],
     queryFn: () => {
       if (!organizationId) {
         throw new Error('Organization ID is required')
       }
-      return fetchAllGaugesByOrganization(organizationId)
+      return fetchAllGaugesByOrganization(organizationId, throughGroup)
     },
     enabled: !!organizationId,
     staleTime: 1000 * 60 * 5,
@@ -75,10 +76,10 @@ export function useAllGauges() {
   })
 }
 
-export function useGaugeHistory(gaugeId: string) {
+export function useGaugeHistory(gaugeId: string, throughGroup?: Exclude<ThroughGroup, 'all'>) {
   return useQuery({
-    queryKey: ["gauge-history", gaugeId],
-    queryFn: () => gaugeService.getGaugeHistory(gaugeId),
+    queryKey: ["gauge-history", gaugeId, throughGroup],
+    queryFn: () => gaugeService.getGaugeHistory(gaugeId, throughGroup),
     enabled: !!gaugeId,
     staleTime: 1000 * 60 * 3, // 3 minutes
     gcTime: 1000 * 60 * 15, // 15 minutes

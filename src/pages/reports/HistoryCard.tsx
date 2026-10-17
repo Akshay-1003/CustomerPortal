@@ -30,6 +30,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { HistoryCardPrintPreview, type HistoryCardPrintRow } from "@/components/reports/HistoryCardPrintPreview"
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
+import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 const REMARK_QUICK_FILTERS = [
   { id: "accept", label: "Accept", keywords: ["accept"] },
@@ -183,8 +185,9 @@ export function HistoryCardPage() {
   const [dueStatusFilter, setDueStatusFilter] = useState<"all" | DueStatus>("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
+  const throughFilter = useHemdeepThroughFilter()
 
-  const { data: gauges = [], isLoading, isFetching, isError, error } = useAllGauges()
+  const { data: gauges = [], isLoading, isFetching, isError, error } = useAllGauges(throughFilter.apiGroup)
   const typedGauges = gauges as HistoryCardGauge[]
   const isTableLoading = isLoading || isFetching
 
@@ -281,6 +284,7 @@ export function HistoryCardPage() {
     setItemsPerPage(10)
     setDueStatusFilter("all")
     setSelectedIds(new Set())
+    throughFilter.setGroup("all")
   }
 
   const toggleRemarkQuickFilter = (id: string) => {
@@ -414,6 +418,11 @@ export function HistoryCardPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            {throughFilter.enabled && <ThroughGroupFilter value={throughFilter.group} onChange={(value) => {
+              throughFilter.setGroup(value)
+              setCurrentPage(1)
+              setSelectedIds(new Set())
+            }} />}
             <Button
               variant="default"
               onClick={handleOpenPrintPreview}

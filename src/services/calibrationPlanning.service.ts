@@ -1,4 +1,5 @@
 import { apiService } from "@/services/api.service"
+import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
 import type {
   CalibrationPlanningDetail,
   CalibrationPlanningDetailParams,
@@ -41,19 +42,19 @@ function buildWeeklyPlans(rows: CalibrationPlanningDetail[]): Map<number, number
 }
 
 export const calibrationPlanningService = {
-  async getOverview(year: number): Promise<CalibrationPlanningOverview> {
+  async getOverview(year: number, throughGroup?: Exclude<ThroughGroup, "all">): Promise<CalibrationPlanningOverview> {
     const overview = await apiService.get<CalibrationPlanningOverview>("/dashboard/gauges/calibration-planning", {
-      params: { year },
+      params: { year, through_group: throughGroup },
     })
 
     if (overview.months.every(hasValidWeeklyPlan)) {
       return overview
     }
 
-    const firstPage = await this.getDetails({ year, limit: PAGE_LIMIT })
+    const firstPage = await this.getDetails({ year, limit: PAGE_LIMIT, throughGroup })
     const additionalPages = Array.from(
       { length: Math.max(0, Math.ceil(firstPage.total / PAGE_LIMIT) - 1) },
-      (_, index) => this.getDetails({ year, page: index + 1, limit: PAGE_LIMIT }),
+      (_, index) => this.getDetails({ year, page: index + 1, limit: PAGE_LIMIT, throughGroup }),
     )
     const remainingPages = await Promise.all(additionalPages)
     const weeklyPlans = buildWeeklyPlans([
@@ -79,6 +80,7 @@ export const calibrationPlanningService = {
     sortDirection = "asc",
     page = 0,
     limit = 25,
+    throughGroup,
   }: CalibrationPlanningDetailParams) {
     return apiService.get<CalibrationPlanningDetailResponse>("/dashboard/gauges/calibration-planning/details", {
       params: {
@@ -90,6 +92,7 @@ export const calibrationPlanningService = {
         sort_direction: sortDirection,
         page,
         limit,
+        through_group: throughGroup,
       },
     })
   },
