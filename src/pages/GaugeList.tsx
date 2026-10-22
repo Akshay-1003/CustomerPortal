@@ -12,7 +12,7 @@ import { authService } from "@/services/auth.service"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 import { useAuth } from "@/hooks/useAuth"
 import { canEditCustomerModule } from "@/lib/permissions"
-import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { useThroughFilter } from "@/hooks/useThroughFilter"
 import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 const ITEMS_PER_PAGE = 10
@@ -36,7 +36,7 @@ export default function GaugeListPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const debouncedSearch = useDebouncedValue(searchQuery, 300)
   const tableRef = useRef<{ onOpenPrintPreview: () => void }>(null)
-  const throughFilter = useHemdeepThroughFilter()
+  const throughFilter = useThroughFilter()
 
   const { data: allGauges = [], isLoading, isFetching, isError, error, refetch } = useAllGauges(throughFilter.apiGroup)
 

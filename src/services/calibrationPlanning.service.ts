@@ -1,5 +1,5 @@
 import { apiService } from "@/services/api.service"
-import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
+import type { ThroughGroup } from "@/config/throughFilters"
 import type {
   CalibrationPlanningDetail,
   CalibrationPlanningDetailParams,

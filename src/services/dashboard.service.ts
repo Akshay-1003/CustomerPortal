@@ -4,7 +4,7 @@ import type {
   DailyCalibrationApiResponse,
   MonthlyCalibrationApiResponse,
 } from "@/types/dashboard"
-import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
+import type { ThroughGroup } from "@/config/throughFilters"
 
 export const dashboardService = {
   async getMonthlyCalibration(params: { year: number; throughGroup?: Exclude<ThroughGroup, "all"> }): Promise<MonthlyCalibrationApiResponse> {

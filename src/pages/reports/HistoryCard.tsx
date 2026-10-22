@@ -30,7 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { HistoryCardPrintPreview, type HistoryCardPrintRow } from "@/components/reports/HistoryCardPrintPreview"
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
-import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { useThroughFilter } from "@/hooks/useThroughFilter"
 import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 const REMARK_QUICK_FILTERS = [
@@ -185,7 +185,7 @@ export function HistoryCardPage() {
   const [dueStatusFilter, setDueStatusFilter] = useState<"all" | DueStatus>("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
-  const throughFilter = useHemdeepThroughFilter()
+  const throughFilter = useThroughFilter()
 
   const { data: gauges = [], isLoading, isFetching, isError, error } = useAllGauges(throughFilter.apiGroup)
   const typedGauges = gauges as HistoryCardGauge[]

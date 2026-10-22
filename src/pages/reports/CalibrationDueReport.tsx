@@ -27,7 +27,7 @@ import { getMonthlyPlanningStatus, type MonthlyPlanningCardStatus } from "@/lib/
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { calibrationPlanningService } from "@/services/calibrationPlanning.service"
 import type { CalibrationPlanningMonth } from "@/types/calibrationPlanning"
-import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { useThroughFilter } from "@/hooks/useThroughFilter"
 import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 type SummaryCard = {
@@ -79,7 +79,7 @@ export function CalibrationDueReportPage() {
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [exportRows, setExportRows] = useState<CalibrationDueReportPrintRow[]>([])
   const [isPreparingExport, setIsPreparingExport] = useState(false)
-  const throughFilter = useHemdeepThroughFilter()
+  const throughFilter = useThroughFilter()
   const { data, isLoading, isFetching, isError, error, refetch } = useCalibrationPlanningOverview(selectedYear, throughFilter.apiGroup)
 
   const yearOptions = useMemo(

@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { gaugeService } from '@/services/gauge.service'
 import { authService } from '@/services/auth.service'
 import type { Gauge } from '@/types/api'
-import type { ThroughGroup } from '@/hooks/useHemdeepThroughFilter'
+import type { ThroughGroup } from '@/config/throughFilters'
 
 const BULK_GAUGE_LIMIT = 200
 

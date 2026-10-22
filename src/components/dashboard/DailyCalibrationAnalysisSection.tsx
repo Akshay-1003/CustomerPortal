@@ -46,7 +46,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useDailyCalibrationDashboard } from "@/hooks/useDailyCalibrationDashboard"
-import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
+import type { ThroughGroup } from "@/config/throughFilters"
 import {
   calculateDailyTotals,
   DASHBOARD_MONTH_OPTIONS,

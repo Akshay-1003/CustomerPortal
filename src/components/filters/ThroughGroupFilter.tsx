@@ -5,7 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
+import { THROUGH_FILTERS, type ThroughGroup } from "@/config/throughFilters"
 
 export function ThroughGroupFilter({
   value,
@@ -21,7 +21,9 @@ export function ThroughGroupFilter({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">All</SelectItem>
-        <SelectItem value="hemdeep">HEMDEEP ENTERPRISES</SelectItem>
+        {THROUGH_FILTERS.map((filter) => (
+          <SelectItem key={filter.key} value={filter.key}>{filter.label}</SelectItem>
+        ))}
         <SelectItem value="other">Other or no match</SelectItem>
       </SelectContent>
     </Select>

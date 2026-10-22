@@ -38,7 +38,7 @@ import { getMonthlyPlanningStatus } from "@/lib/monthlyPlanningCard"
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { calibrationPlanningService } from "@/services/calibrationPlanning.service"
 import type { CalibrationPlanningStatus } from "@/types/calibrationPlanning"
-import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { useThroughFilter } from "@/hooks/useThroughFilter"
 import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 const PAGE_SIZE = 25
@@ -98,7 +98,7 @@ export function CalibrationPlanningMonthDetailsPage() {
   const [isExportPreviewOpen, setIsExportPreviewOpen] = useState(false)
   const [exportRows, setExportRows] = useState<CalibrationDueReportPrintRow[]>([])
   const [isPreparingExport, setIsPreparingExport] = useState(false)
-  const throughFilter = useHemdeepThroughFilter()
+  const throughFilter = useThroughFilter()
   const overviewQuery = useCalibrationPlanningOverview(year, throughFilter.apiGroup)
   const detailsQuery = useCalibrationPlanningDetails(
     {

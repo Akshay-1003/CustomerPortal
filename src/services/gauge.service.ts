@@ -1,6 +1,6 @@
 import { apiService } from './api.service'
 import { type Gauge, type GaugeHistory } from '@/types/api'
-import type { ThroughGroup } from '@/hooks/useHemdeepThroughFilter'
+import type { ThroughGroup } from '@/config/throughFilters'
 
 type GaugeHistoryResponse =
   | GaugeHistory[]

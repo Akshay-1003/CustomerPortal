@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { authService } from "@/services/auth.service"
 import { dashboardService } from "@/services/dashboard.service"
-import type { ThroughGroup } from "@/hooks/useHemdeepThroughFilter"
+import type { ThroughGroup } from "@/config/throughFilters"
 
 export function useDailyCalibrationDashboard(year: number, month: number, throughGroup?: Exclude<ThroughGroup, "all">) {
   const organizationId = authService.getOrganizationId()

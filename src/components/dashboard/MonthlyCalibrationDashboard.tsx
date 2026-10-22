@@ -19,7 +19,7 @@ import { CalibrationMonthTable } from "./CalibrationMonthTable"
 import { DailyCalibrationAnalysisSection } from "./DailyCalibrationAnalysisSection"
 import { MonthlyPlannedChart } from "./MonthlyPlannedChart"
 import { MonthlyStatusGroupedChart } from "./MonthlyStatusGroupedChart"
-import { useHemdeepThroughFilter } from "@/hooks/useHemdeepThroughFilter"
+import { useThroughFilter } from "@/hooks/useThroughFilter"
 import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 function getErrorMessage(error: unknown) {
@@ -77,7 +77,7 @@ export function MonthlyCalibrationDashboard() {
   const [selectedMonth, setSelectedMonth] = useState<NormalizedMonthlyCalibrationDatum | null>(null)
   const [selectedDailyMonth, setSelectedDailyMonth] = useState(currentMonth)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const throughFilter = useHemdeepThroughFilter()
+  const throughFilter = useThroughFilter()
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useMonthlyCalibrationDashboard(selectedYear, throughFilter.apiGroup)

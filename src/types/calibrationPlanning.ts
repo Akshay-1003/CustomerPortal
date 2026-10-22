@@ -62,5 +62,6 @@ export type CalibrationPlanningDetailParams = {
   sortDirection?: "asc" | "desc"
   page?: number
   limit?: number
-  throughGroup?: "hemdeep" | "other"
+  throughGroup?: Exclude<ThroughGroup, "all">
 }
+import type { ThroughGroup } from "@/config/throughFilters"
