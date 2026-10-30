@@ -1,4 +1,9 @@
 import { Bell, CheckCheck } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { notificationService } from "@/services/notification.service";
+import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter";
+import { PlanningRequests } from "@/components/notifications/PlanningRequests";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +18,14 @@ import type { NotificationEvent } from "@/types/notifications";
 
 export function Notifications() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const selectedNotification = searchParams.get("notification");
+  const detail = useQuery({ queryKey: ["customer-notifications", user?.user.organization_id, "detail", selectedNotification],
+    queryFn: () => notificationService.getNotification(selectedNotification!), enabled: Boolean(selectedNotification) });
   const notificationsQuery = useCustomerNotifications({ limit: 200 });
   const markRead = useMarkCustomerNotificationRead();
-  const notifications = notificationsQuery.data?.notifications ?? [];
-  const unreadCount = notifications.filter((item) => !item.read_by_customer).length;
+  const notifications = selectedNotification ? (detail.data ? [detail.data] : []) : notificationsQuery.data?.notifications ?? [];
+  const unreadCount = notificationsQuery.data?.unread_count ?? notifications.filter((item) => !item.read_by_customer).length;
   const canUpdateNotifications = canEditCustomerModule(
     user?.user,
     "customer_notifications",
@@ -35,7 +44,8 @@ export function Notifications() {
         <Badge variant="primary">{unreadCount} unread</Badge>
       </div>
 
-      {notificationsQuery.isLoading ? (
+      {(notificationsQuery.isError || detail.isError) && <p role="alert">Unable to load notifications.</p>}
+      {(notificationsQuery.isLoading || (selectedNotification && detail.isLoading)) ? (
         <Card>
           <CardContent className="py-14 text-center text-muted-foreground">
             Loading notifications...
@@ -64,6 +74,7 @@ export function Notifications() {
           ))}
         </div>
       )}
+      <PlanningRequests />
     </div>
   );
 }
@@ -110,6 +121,11 @@ function NotificationCard({
         ) : null}
       </CardHeader>
       <CardContent>
+        {notification.snapshots?.length ? <details className="mb-3 text-sm"><summary className="cursor-pointer">View due gauges ({notification.snapshots.length})</summary>
+          <ul className="mt-2 space-y-2">{notification.snapshots.map(s => <li key={s.cycle_key}>
+            {s.laboratory_name} · {s.gauge_name} · {s.identification_number ?? "—"} · Due {s.due_date} · Last calibrated {s.last_calibration_date}
+            <p className="text-xs text-muted-foreground">Serial: {s.manf_serial_number || "—"} · {formatSpecificationForPrint(s.specifications, s.unit || "mm")} · Certificate: {s.last_certificate_no || "—"}</p>
+          </li>)}</ul></details> : null}
         <CustomerNotificationActions notification={notification} />
       </CardContent>
     </Card>

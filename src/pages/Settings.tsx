@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/hooks/useAuth"
 import { useOrganizationById } from "@/hooks/useOrganizations"
+import { ReminderPreferences } from "@/components/notifications/ReminderPreferences"
 
 export function Settings() {
   const { user } = useAuth()
@@ -19,6 +20,7 @@ const roles = [
 
   return (
     <div className="space-y-6 w-full max-w-5xl">
+      <ReminderPreferences />
 
       {/* Header */}
       <div>

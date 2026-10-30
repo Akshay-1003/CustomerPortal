@@ -8,6 +8,12 @@ export type CustomerResponseStatus =
   | "none";
 
 export interface NotificationEvent {
+  laboratory_id?: string;
+  planning_request_id?: string | null;
+  snapshots?: import("./planningRequests").ReminderSnapshot[];
+  accepted_count?: number;
+  skipped_count?: number;
+  skipped?: Array<{ gauge_id: string; reason: string }>;
   id: string;
   organization_id: string;
   organization_name: string;
@@ -36,9 +42,26 @@ export interface NotificationEvent {
 }
 
 export interface NotificationListResponse {
+  unread_count?: number;
   notifications: NotificationEvent[];
   total_count: number;
 }
 
 export type CustomerNotificationResponse = "yes_plan_calibration" | "not_now";
+
+export interface ReminderPreferences {
+  laboratory_name?: string | null;
+  organization_id: string;
+  laboratory_id: string;
+  in_app_enabled: boolean;
+  email_reminders_enabled: boolean;
+  whatsapp_reminders_enabled: boolean;
+  reminder_timing: Record<string, boolean>;
+  recipient_emails: string[];
+  whatsapp_numbers: string[];
+  whatsapp_consents: Record<string, boolean>;
+  customer_opt_outs: string[];
+  timezone: string;
+  delivery_time: string;
+}
 

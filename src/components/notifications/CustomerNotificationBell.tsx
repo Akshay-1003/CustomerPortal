@@ -20,7 +20,7 @@ export function CustomerNotificationBell() {
   const notificationsQuery = useCustomerNotifications({ limit: 25 });
   const markRead = useMarkCustomerNotificationRead();
   const notifications = notificationsQuery.data?.notifications ?? [];
-  const unreadCount = notifications.filter((item) => !item.read_by_customer).length;
+  const unreadCount = notificationsQuery.data?.unread_count ?? notifications.filter((item) => !item.read_by_customer).length;
   const canUpdateNotifications = canEditCustomerModule(
     user?.user,
     "customer_notifications",

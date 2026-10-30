@@ -28,7 +28,9 @@ export function CustomerNotificationActions({
 
   if (!canRespond) {
     if (notification.response_status === "yes_plan_calibration") {
-      return <Badge variant="primary">Calibration planned</Badge>;
+      return <div className="space-y-2"><Badge variant="primary">Calibration request submitted</Badge>
+        <p className="text-xs">{notification.accepted_count ?? notification.gauge_count} accepted; {notification.skipped_count ?? 0} skipped.</p>
+        <Link className="text-sm text-primary underline" to={`/notifications?request=${notification.planning_request_id ?? ""}#calibration-requests`}>Track request</Link></div>;
     }
 
     if (notification.response_status === "not_now") {
@@ -40,7 +42,7 @@ export function CustomerNotificationActions({
     <div className="flex flex-wrap gap-2">
       <Button asChild variant="outline" size="sm">
         <Link to={actionUrl} onClick={onActionComplete}>
-          View Due Gauges
+            {notification.planning_request_id ? "Track request" : "View Due Gauges"}
         </Link>
       </Button>
       {canRespond ? (

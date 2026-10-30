@@ -58,6 +58,7 @@ export function useRespondToNotification() {
       response: CustomerNotificationResponse;
     }) => notificationService.respondToNotification(notificationId, response),
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["customer-calibration-requests"] });
       queryClient.invalidateQueries({ queryKey: notificationKeys.all });
       toast.success(
         variables.response === "yes_plan_calibration"
@@ -66,6 +67,8 @@ export function useRespondToNotification() {
       );
     },
     onError: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["calibration-planning"] });
       toast.error("Failed to send response");
     },
   });
