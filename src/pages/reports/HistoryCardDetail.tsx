@@ -8,7 +8,6 @@ import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationP
 import { mastersService } from "@/services/masters.service"
 import { authService } from "@/services/auth.service"
 import { useThroughFilter } from "@/hooks/useThroughFilter"
-import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
 
 export function HistoryCardDetailPage() {
   const { id } = useParams()
