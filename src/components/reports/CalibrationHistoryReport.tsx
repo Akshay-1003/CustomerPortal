@@ -356,7 +356,7 @@ export function CalibrationHistoryReport({
                   <h2>{companyName || gauge?.client_organization || "Organization"}</h2>
                   <p>{companyAddress || "Address not available"}</p>
                 </div>
-                <div className="chr-doc-title-inline">HISTORY CARD (Gauge and Instrument)</div>
+                <div className="chr-doc-title-inline">HISTORY CARD</div>
               </div>
               <section className="chr-section">
                 {renderInfoGrid(specificationInfoHeader)}
@@ -385,7 +385,7 @@ export function CalibrationHistoryReport({
           ) : (
             <header className="chr-header-compact">
               <div className="chr-company-compact">{companyName || gauge?.client_organization || "Organization"}</div>
-              <div className="chr-title-compact">HISTORY CARD (Gauge and Instrument)</div>
+              <div className="chr-title-compact">HISTORY CARD</div>
               <div className="chr-compact-meta">
                 <span>Gauge: {gauge?.identification_number || "N/A"}</span>
                 <span>Serial: {gauge?.manf_serial_number || "N/A"}</span>

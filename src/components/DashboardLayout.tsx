@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { CustomerNotificationBell } from "@/components/notifications/CustomerNotificationBell"
 import { useAuth } from "@/hooks/useAuth"
 import { canViewCustomerModule } from "@/lib/permissions"
+import { DemoControls } from "./DemoControls"
 
 
 export function DashboardLayout() {
@@ -44,6 +45,7 @@ export function DashboardLayout() {
             <PwaInstallPrompt />
           </div>
         </header>
+        <DemoControls />
         <div className="flex flex-1 w-full min-w-0 max-w-full flex-col gap-4 overflow-x-hidden p-3 sm:p-4 md:p-6">
           <div className="w-full max-w-full min-w-0">
             <Outlet />

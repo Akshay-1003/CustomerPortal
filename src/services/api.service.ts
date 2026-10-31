@@ -7,6 +7,7 @@ import axios, {
 import { jwtDecode } from "jwt-decode"
 import { env } from "@/config/env"
 import { redirectToAppPath } from "@/lib/appNavigation"
+import { isDemoSession } from "@/demo/session"
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean
@@ -41,6 +42,7 @@ class ApiService {
     if (typeof BroadcastChannel !== "undefined") {
       this.authChannel = new BroadcastChannel("customerportal-auth")
       this.authChannel.onmessage = (event: MessageEvent<AuthBroadcastMessage>) => {
+        if (isDemoSession()) return
         if (event.data?.type === "access-token") {
           this.setAuthToken(event.data.token, false)
         }
@@ -54,7 +56,17 @@ class ApiService {
     }
 
     this.api.interceptors.request.use(
-      (config) => {
+      async (config) => {
+        if (isDemoSession()) {
+          const { demoAdapter } = await import("@/demo/adapter")
+          config.adapter = demoAdapter
+          config.withCredentials = false
+          config.headers.delete("Authorization")
+          return config
+        }
+        if (this.accessToken?.endsWith(".demo")) {
+          throw new Error("Demo sessions cannot access the live API")
+        }
         if (this.accessToken) {
           config.headers.Authorization = `Bearer ${this.accessToken}`
         }
@@ -153,7 +165,7 @@ class ApiService {
   clearLocalAuthState(notifyOtherTabs = true): void {
     this.accessToken = null
     sessionStorage.removeItem(AUTH_STORAGE_KEY)
-    if (notifyOtherTabs) {
+    if (notifyOtherTabs && !isDemoSession()) {
       this.authChannel?.postMessage({ type: "signed-out" } satisfies AuthBroadcastMessage)
     }
   }
@@ -197,7 +209,7 @@ class ApiService {
   setAuthToken(token: string, notifyOtherTabs = true): void {
     this.sessionExpired = false
     this.accessToken = token
-    if (notifyOtherTabs) {
+    if (notifyOtherTabs && !isDemoSession()) {
       this.authChannel?.postMessage({ type: "access-token", token } satisfies AuthBroadcastMessage)
     }
   }

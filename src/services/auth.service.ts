@@ -8,6 +8,7 @@ import type {
   User,
 } from "@/types/api"
 import { jwtDecode } from "jwt-decode"
+import { endDemoSession, isDemoSession } from "@/demo/session"
 
 const AUTH_CONTEXT_KEY = "customerportal.auth-context"
 
@@ -110,6 +111,11 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
+    if (isDemoSession()) {
+      apiService.clearLocalAuthState(false)
+      endDemoSession()
+      return
+    }
     try {
       await apiService.post("auth/customer/logout", undefined, {
         withCredentials: true,

@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { isDemoSession } from "@/demo/session"
+import { DemoCertificates } from "@/components/DemoCertificates"
 import {
   Table,
   TableBody,
@@ -34,6 +36,7 @@ const ITEMS_PER_PAGE = 10
 
 export function CalibrationCertificates() {
   const [currentPage, setCurrentPage] = useState(1)
+  if (isDemoSession()) return <DemoCertificates />
   const allCertificates = generateMockCertificates(38) // Total items
   const totalPages = Math.ceil(allCertificates.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE

@@ -42,9 +42,6 @@ export function HistoryCardDetailPage() {
 
   return (
     <div className="w-full">
-      {throughFilter.enabled && <div className="mb-3 flex justify-end">
-        <ThroughGroupFilter value={throughFilter.group} onChange={throughFilter.setGroup} />
-      </div>}
       <CalibrationHistoryReport
         gauge={gauge}
         history={gaugeHistory}

@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
+import { startDemoSession } from "@/demo/session"
 
 const LOGIN_BACKGROUND_SRC = "/images/bg.jpeg"
 
@@ -180,6 +181,12 @@ export function Login() {
                 </Button>
               </form>
             </Form>
+            <div className="mt-5 border-t pt-4">
+              <Button type="button" variant="outline" className="w-full" onClick={startDemoSession}>
+                Explore customer demo
+              </Button>
+              <p className="mt-2 text-center text-xs text-muted-foreground">50 sample gauges · Interactive workflows · No account required</p>
+            </div>
           </CardContent>
         </Card>
       </main>
