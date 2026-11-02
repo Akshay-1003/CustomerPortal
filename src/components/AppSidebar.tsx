@@ -67,6 +67,7 @@ const menuItems: MenuItem[] = [
     items: [
       { title: "Sent For Calibration", icon: ArrowRight, href: "/transactions/inward", matchPattern: "/transactions/inward.*", permission: { module: "customer_transactions" } },
       { title: "Received from Calibration", icon: ArrowLeft, href: "/transactions/outward", matchPattern: "/transactions/outward.*", permission: { module: "customer_transactions" } },
+      { title: "Gauge Verification & Acceptance", icon: FileText, href: "/transactions/gauge-acceptance", matchPattern: "/transactions/gauge-acceptance.*", permission: { module: "customer_transactions" } },
     ],
   },
   {

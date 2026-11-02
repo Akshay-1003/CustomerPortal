@@ -14,6 +14,7 @@ import { DemoControls, DemoTransactions } from "@/components/DemoControls"
 import App from "@/App"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { ThemeProvider } from "@/components/ThemeProvider"
+import { acceptanceService } from "@/services/gaugeAcceptance.service"
 
 beforeEach(() => {
   sessionStorage.clear()
@@ -128,7 +129,10 @@ describe("isolated customer showcase", () => {
     await apiService.post("/demo/receive", { id: dispatch.id })
     const updated = await gaugeService.getGaugeById(gauge.id)
     expect(updated.status).toBe("calibration_completed")
-    expect(updated.next_calibration_date).not.toBe(gauge.next_calibration_date)
+    expect(updated.pending_acceptance).toBe(true)
+    const returned = loadDemoState().acceptances.find(r => r.gauge_id === gauge.id)!
+    await acceptanceService.review(returned, { decision: "accept", remark_note: "", fields: {}, correction_reason: "", idempotency_key: "demo-accept-return" })
+    expect((await gaugeService.getGaugeById(gauge.id)).next_calibration_date).not.toBe(gauge.next_calibration_date)
     expect((await gaugeService.getGaugeHistory(gauge.id))[0].notes).toContain("Received")
     await expect(notificationService.respondToNotification("stale-notification", "yes_plan_calibration")).rejects.toThrow("No eligible")
     await expect(apiService.post("/demo/receive", { id: dispatch.id })).rejects.toThrow()

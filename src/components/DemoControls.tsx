@@ -59,6 +59,7 @@ function DemoToolbar() {
         <Button size="sm" variant="outline" disabled={busy} onClick={() => void perform("/demo/reminder", { milestone }, "New demo reminder added to the notification bell")}>Simulate reminder</Button>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => void perform("/demo/advance-week", {}, "Demo advanced one week; eligible overdue reminders added")}>Advance demo 7 days</Button>
         <Button size="sm" variant="outline" asChild><Link to="/notifications">View notifications and requests</Link></Button>
+        <Button size="sm" variant="outline" asChild><Link to="/transactions/gauge-acceptance">Gauge verification demo</Link></Button>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <select aria-label="Demo planning request" className={selectClass} value={currentRequest?.id ?? ""} onChange={e => setRequestId(e.target.value)}>

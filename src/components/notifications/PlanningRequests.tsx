@@ -42,7 +42,7 @@ export function PlanningRequests() {
         {request.note && <p>Laboratory note: {request.note}</p>}
         <details><summary className="cursor-pointer font-medium">View gauges and history</summary>
           <ul className="mt-2 space-y-2">{request.items.map(({ snapshot: s }) => <li key={s.cycle_key}>
-            {s.laboratory_name} · {s.gauge_name} · {s.identification_number ?? "—"} · Due {s.due_date}
+            {s.laboratory_name} · {s.gauge_name} · {s.identification_number ?? "—"} · {s.pending_acceptance ? "Calibration details await gauge verification" : `Due ${s.due_date}`}
           </li>)}</ul>
           <ul className="mt-3 text-muted-foreground">{request.history.map((event, index) => <li key={index}>
             {event.status.replaceAll("_", " ")} · {event.note || event.reason}

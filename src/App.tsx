@@ -24,6 +24,7 @@ const GaugeLifePredictionPage = lazy(() => import("./pages/gauge-health/GaugeLif
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })))
 const InwardPage = lazy(() => import("./pages/transactions/InwardPage"))
 const OutwardPage = lazy(() => import("./pages/transactions/OutwardPage"))
+const GaugeAcceptance = lazy(() => import("./pages/transactions/GaugeAcceptance"))
 const HistoryCardPage = lazy(() => import("./pages/reports/HistoryCard").then(m => ({ default: m.HistoryCardPage })))
 const HistoryCardDetailPage = lazy(() => import("./pages/reports/HistoryCardDetail").then(m => ({ default: m.HistoryCardDetailPage })))
 const CalibrationDueReportPage = lazy(() => import("./pages/reports/CalibrationDueReport").then(m => ({ default: m.CalibrationDueReportPage })))
@@ -111,6 +112,7 @@ function AppContent() {
         <Route path="notifications" element={guardedPage("customer_notifications", <NotificationsPage />)} />
         <Route path="transactions/inward" element={guardedPage("customer_transactions", <InwardPage />)} />
         <Route path="transactions/outward" element={guardedPage("customer_transactions", <OutwardPage />)} />
+        <Route path="transactions/gauge-acceptance" element={guardedPage("customer_transactions", <GaugeAcceptance />)} />
       </Route>
 
       {/* Catch all - redirect to home */}

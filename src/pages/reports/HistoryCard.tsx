@@ -32,6 +32,7 @@ import { HistoryCardPrintPreview, type HistoryCardPrintRow } from "@/components/
 import { useCurrentOrganizationPrintInfo } from "@/hooks/useCurrentOrganizationPrintInfo"
 import { useThroughFilter } from "@/hooks/useThroughFilter"
 import { ThroughGroupFilter } from "@/components/filters/ThroughGroupFilter"
+import { ACCEPTANCE_DECISIONS } from "@/types/gaugeAcceptance"
 
 const REMARK_QUICK_FILTERS = [
   { id: "accept", label: "Accept", keywords: ["accept"] },
@@ -132,6 +133,7 @@ function getDueMeta(nextCalibrationDate?: string): DueMeta {
 }
 
 function getGaugeRemark(gauge: HistoryCardGauge): string {
+  if (gauge.customer_acceptance) return ACCEPTANCE_DECISIONS[gauge.customer_acceptance.decision]
   const specRemark = gauge?.specifications?.remark
   if (typeof specRemark === "string" && specRemark.trim()) {
     return specRemark.trim()
@@ -200,7 +202,8 @@ export function HistoryCardPage() {
         !search ||
         toLower(gauge.master_gauge).includes(toLower(search)) ||
         toLower(gauge.identification_number || "").includes(toLower(search)) ||
-        toLower(gauge.manf_serial_number || "").includes(toLower(search))
+        toLower(gauge.manf_serial_number || "").includes(toLower(search)) ||
+        toLower(gauge.customer_acceptance?.remark_note).includes(toLower(search))
 
       const matchesStatus = status === "all" || gauge.status === status
       const matchesMake = make === "all" || gauge.make === make
@@ -211,7 +214,9 @@ export function HistoryCardPage() {
 
       const matchesRemarkFilters =
         selectedRemarkFilters.length === 0 ||
-        selectedRemarkFilters.some((filter) => normalizedRemark.includes(filter))
+        selectedRemarkFilters.some((filter) => gauge.customer_acceptance
+          ? gauge.customer_acceptance.decision === filter
+          : (REMARK_QUICK_FILTERS.find(item => item.id === filter)?.keywords ?? [filter]).some(keyword => normalizedRemark.includes(keyword)))
 
       return (
         matchesSearch &&

@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { Fragment, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import type { Gauge, GaugeHistory } from "@/types/api"
 import { Printer } from "lucide-react"
@@ -11,6 +11,7 @@ import {
   formatSpecificationForPrint,
 } from "./helpers/specificationFormatter"
 import { DynamicAcceptanceLimitTable } from "./helpers/DynamicAcceptanceLimitTable"
+import { ACCEPTANCE_DECISIONS, type CustomerAcceptance } from "@/types/gaugeAcceptance"
 
 type CalibrationRow = {
   serialNo: number
@@ -21,6 +22,9 @@ type CalibrationRow = {
   observations: string
   dueDate: string
   status: string
+  acceptance?: CustomerAcceptance | null
+  reviewLines?: string[]
+  continuation?: boolean
 }
 
 type ReportPage = {
@@ -114,23 +118,38 @@ function formatCalibrationAgency(value?: string): string {
 }
 
 function toCalibrationRows(history: unknown): CalibrationRow[] {
-  return toHistoryArray(history).map((record, index) => {
+  return toHistoryArray(history).flatMap((record, index) => {
     const raw = record as GaugeHistory & {
       certificate_no?: string
       certificate_number?: string
       certificate_url?: string
       observations?: string | null
     }
-    return {
+    const row: CalibrationRow = {
       serialNo: index + 1,
       labId: record.inward_gauge_lab_id || "N/A",
-      certificateNo: raw.certificate_no || raw.certificate_number || "N/A",
+      certificateNo: raw.certificate_no || raw.certificate_number || record.certificate || "N/A",
       certificateUrl: raw.certificate_url,
       calibrationDate: formatDate(record.certificate_issue_date || record.date),
       observations: raw.observations || "N/A",
       dueDate: formatDate(record.next_calibration_date),
       status: formatStatusLabel(record.status),
+      acceptance: record.customer_acceptance,
     }
+    const review = row.acceptance
+    if (!review) return [row]
+    const lines = [
+      `Customer verification: ${ACCEPTANCE_DECISIONS[review.decision]} · Version ${review.version}`,
+      `Remark note: ${review.remark_note || "—"}`,
+      `Maintenance / other details: ${review.maintenance_details || "—"}`,
+      `Acceptance criteria: ${review.acceptance_criteria || "—"}`,
+      `History card: ${review.history_card_number || "—"} · Part: ${review.part_name || "—"}`,
+      `Gauge location: ${review.gauge_location || "—"}`,
+      `Reviewed by: ${review.reviewed_by} · ${formatDate(review.updated_at)}`,
+    ].flatMap(line => line.split("\n").flatMap(part => part.match(/.{1,85}/g) ?? [""]))
+    const chunks: CalibrationRow[] = []
+    for (let start = 0; start < lines.length; start += 7) chunks.push({ ...row, reviewLines: lines.slice(start, start + 7), continuation: start > 0 })
+    return chunks
   })
 }
 
@@ -152,15 +171,16 @@ function estimateRowHeight(row: CalibrationRow): number {
     estimateLines(row.observations, 30),
     estimateLines(row.status, 24),
   ]
-  return Math.max(...lines) * 14 + 12
+  const reviewLines = row.reviewLines?.length ? row.reviewLines.length + 2 : 0
+  return ((row.continuation ? 0 : Math.max(...lines)) + reviewLines) * 14 + 12
 }
 
-function paginateRows(rows: CalibrationRow[]): ReportPage[] {
+function paginateRows(rows: CalibrationRow[], extraHeaderHeight = 0): ReportPage[] {
   if (!rows.length) return [{ type: "full", rows: [] }]
 
   const pages: ReportPage[] = []
   let pageType: "full" | "compact" = "full"
-  let availableHeight = FIRST_PAGE_ROW_SPACE_PX
+  let availableHeight = FIRST_PAGE_ROW_SPACE_PX - extraHeaderHeight
   let currentRows: CalibrationRow[] = []
 
   const closeCurrentPage = () => {
@@ -197,6 +217,10 @@ function renderInfoGrid(items: LabelValue[]) {
       ))}
     </div>
   )
+}
+
+function reviewSummary(value: string) {
+  return value.length > 80 ? `${value.slice(0, 80)}… (details below)` : value || "—"
 }
 
 function renderCertificateCell(row: CalibrationRow) {
@@ -246,7 +270,7 @@ export function CalibrationHistoryReport({
   formatNumber,
 }: CalibrationHistoryReportProps) {
   const rows = useMemo(() => toCalibrationRows(history), [history])
-  const pages = useMemo(() => paginateRows(rows), [rows])
+  const pages = useMemo(() => paginateRows(rows, gauge?.customer_acceptance ? 180 : 0), [rows, gauge?.customer_acceptance])
 
   const specifications = useMemo(
     () => (gauge?.specifications || {}) as Record<string, unknown>,
@@ -292,7 +316,12 @@ export function CalibrationHistoryReport({
   ]
   const specificationInfo: LabelValue[] = [
     { label: "Specification Size", value: specificationSize },
-    { label: "Acceptance Criteria", value: acceptanceCriteria },
+    { label: "Acceptance Criteria", value: gauge?.customer_acceptance ? reviewSummary(gauge.customer_acceptance.acceptance_criteria) : acceptanceCriteria },
+    ...(gauge?.customer_acceptance ? [
+      { label: "History Card No", value: reviewSummary(gauge.customer_acceptance.history_card_number) },
+      { label: "Part Name", value: reviewSummary(gauge.customer_acceptance.part_name) },
+      { label: "Gauge Location", value: reviewSummary(gauge.customer_acceptance.gauge_location) },
+    ] : []),
   ]
   const onPrint = () => window.print()
   const renderTable = (page: ReportPage) => (
@@ -327,7 +356,7 @@ export function CalibrationHistoryReport({
           </tr>
         ) : (
           page.rows.map((row, rowIndex) => (
-            <tr key={`${row.labId}-${row.certificateNo}-${rowIndex}`}>
+            <Fragment key={`${row.labId}-${row.certificateNo}-${rowIndex}`}>{!row.continuation && <tr>
               <td>{row.serialNo}</td>
               <td>{renderLabIdCell(row)}</td>
               <td>{renderCertificateCell(row)}</td>
@@ -335,7 +364,11 @@ export function CalibrationHistoryReport({
               <td>{row.dueDate}</td>
               <td>{row.observations}</td>
               <td>{renderStatusCell(row.status)}</td>
-            </tr>
+            </tr>}
+            {row.reviewLines && <tr><td colSpan={7} style={{ textAlign: "left", whiteSpace: "normal", overflowWrap: "anywhere" }}>
+              {row.continuation && <strong>Customer verification continued · {row.labId} · {row.certificateNo}</strong>}
+              {row.reviewLines.map((line, index) => <div key={index}>{line}</div>)}
+            </td></tr>}</Fragment>
           ))
         )}
       </tbody>

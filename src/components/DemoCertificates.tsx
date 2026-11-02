@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { loadDemoState, snapshot } from "@/demo/data"
+import { loadDemoState, snapshot, demoVisibleGauge } from "@/demo/data"
 import { gaugeService } from "@/services/gauge.service"
 
 export function DemoCertificates() {
@@ -15,7 +15,7 @@ export function DemoCertificates() {
   const [selected, setSelected] = useState("")
   const state = useQuery({ queryKey: ["demo-state"], queryFn: loadDemoState }).data
   const certificate = useQuery({ queryKey: ["demo-certificate", selected], queryFn: () => gaugeService.getGaugeHistory(selected), enabled: Boolean(selected) })
-  const gauges = (state?.gauges ?? []).filter(g => `${g.identification_number} ${g.master_gauge_name} ${snapshot(g).laboratory_name}`.toLowerCase().includes(search.toLowerCase()))
+  const gauges = (state?.gauges ?? []).map(g => state ? demoVisibleGauge(state, g) : g).filter(g => `${g.identification_number} ${g.master_gauge_name} ${snapshot(g).laboratory_name}`.toLowerCase().includes(search.toLowerCase()))
   const pdf = certificate.data?.[0]?.certificate_url
   return <div className="space-y-4">
     <h1 className="text-3xl font-semibold">Calibration certificates</h1>

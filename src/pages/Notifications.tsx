@@ -123,7 +123,8 @@ function NotificationCard({
       <CardContent>
         {notification.snapshots?.length ? <details className="mb-3 text-sm"><summary className="cursor-pointer">View due gauges ({notification.snapshots.length})</summary>
           <ul className="mt-2 space-y-2">{notification.snapshots.map(s => <li key={s.cycle_key}>
-            {s.laboratory_name} · {s.gauge_name} · {s.identification_number ?? "—"} · Due {s.due_date} · Last calibrated {s.last_calibration_date}
+            {s.laboratory_name} · {s.gauge_name} · {s.identification_number ?? "—"}
+            {s.pending_acceptance ? " · Calibration details await gauge verification" : ` · Due ${s.due_date} · Last calibrated ${s.last_calibration_date}`}
             <p className="text-xs text-muted-foreground">Serial: {s.manf_serial_number || "—"} · {formatSpecificationForPrint(s.specifications, s.unit || "mm")} · Certificate: {s.last_certificate_no || "—"}</p>
           </li>)}</ul></details> : null}
         <CustomerNotificationActions notification={notification} />

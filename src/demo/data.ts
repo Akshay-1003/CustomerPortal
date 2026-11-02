@@ -4,6 +4,7 @@ import type { NotificationEvent, ReminderPreferences, ReminderType } from "@/typ
 import type { PlanningRequest, ReminderSnapshot, RequestStatus } from "@/types/planningRequests"
 import type { CalibrationPlanningDetail } from "@/types/calibrationPlanning"
 import { DEMO_DATA_KEY } from "./session"
+import { EMPTY_ACCEPTANCE_FIELDS, type AcceptanceRow, type AcceptanceDecision } from "@/types/gaugeAcceptance"
 
 export const CUSTOMER_ID = "demo-customer"
 export const LABS = ["demo-lab-pune", "demo-lab-kolhapur"]
@@ -20,7 +21,8 @@ export type DemoTransaction = { id: string; gauge_ids: string[]; date: string; r
 export type DemoDelivery = { id: string; notification_id: string; laboratory_id: string; status: "sent" | "delivered" | "read" | "failed" | "suppressed"; reason?: string }
 export type DemoState = { version: 1; anchor: string; gauges: Gauge[]; histories: Record<string, GaugeHistory[]>;
   notifications: NotificationEvent[]; requests: PlanningRequest[]; preferences: ReminderPreferences[];
-  transactions: DemoTransaction[]; deliveries: DemoDelivery[]; formatNumber: string }
+  transactions: DemoTransaction[]; deliveries: DemoDelivery[]; formatNumber: string;
+  acceptances: AcceptanceRow[]; acceptanceBatches: Record<string, string> }
 
 export function snapshot(gauge: Gauge): ReminderSnapshot {
   const labIndex = Number(gauge.id.replace(/\D/g, "")) % 2
@@ -93,13 +95,50 @@ export function createDemoState(now = new Date()): DemoState {
   const deliveries: DemoDelivery[] = notifications.map((n, i) => ({ id: `demo-delivery-${i}`, notification_id: n.id,
     laboratory_id: n.laboratory_id!, status: (["sent", "delivered", "read", "failed", "suppressed"] as const)[i],
     reason: i === 3 ? "Simulated provider failure" : i === 4 ? "Simulated missing consent" : undefined }))
-  return { version: 1, anchor: day(now), gauges, histories, notifications, requests, preferences, transactions, deliveries, formatNumber: "DEMO/HC/01" }
+  const state: DemoState = { version: 1, anchor: day(now), gauges, histories, notifications, requests, preferences, transactions, deliveries, formatNumber: "DEMO/HC/01", acceptances: [], acceptanceBatches: {} }
+  for (const [i, transaction] of transactions.filter(t => t.received_date).entries()) {
+    const row = createAcceptanceSource(state, transaction, transaction.gauge_ids[0])
+    if (i < 7) {
+      const decision: AcceptanceDecision = i < 4 ? (i === 1 ? "conditional_accept" : "accept") : (["not_ok", "damaged", "repair"] as const)[i - 4]
+      row.decision = decision; row.status = i < 4 ? "accepted" : "rejected"; row.version = 1
+      const values = { ...EMPTY_ACCEPTANCE_FIELDS, history_card_number: `DEMO-HC-${i + 1}`, gauge_location: "Inspection bay", part_name: "Housing", acceptance_criteria: "Suitable for intended inspection", maintenance_details: "Customer inspected on receipt",
+        decision, remark_note: decision === "accept" ? "Verified" : "Demo exception noted", status: row.status, version: 1,
+        certificate_id: row.certificate_id, certificate_revision: 1, gauge_id: row.gauge_id, updated_at: now.toISOString(), reviewed_by: "demo-user" }
+      row.review = { ...values, history: [{ ...values, correction_reason: "" }] }
+      row.prefill = values
+      histories[row.gauge_id][0].customer_acceptance = row.review
+    }
+    state.acceptances.push(row)
+  }
+  return state
+}
+
+export function createAcceptanceSource(state: DemoState, transaction: DemoTransaction, gaugeId: string): AcceptanceRow {
+  const gauge = state.gauges.find(g => g.id === gaugeId)!
+  const s = snapshot(gauge)
+  const id = `demo-return-${transaction.id}-${gaugeId}`
+  if (state.histories[gaugeId]?.[0]) state.histories[gaugeId][0].acceptance_required = true
+  return { outward_gauge_id: id, certificate_id: `demo-certificate-${id}`, certificate_revision: 1, version: 0,
+    gauge_id: gaugeId, gauge_inward_id: `demo-cycle-${id}`, organization_id: CUSTOMER_ID,
+    laboratory_id: s.laboratory_id!, laboratory_name: s.laboratory_name!, inward_no: transaction.number,
+    outward_no: transaction.number, inward_gauge_lab_id: `DEMO-${gauge.identification_number}`,
+    through: Number(gaugeId.replace(/\D/g, "")) % 2 ? "Direct" : "Veeresha SPM", gauge_name: gauge.master_gauge_name,
+    identification_number: gauge.identification_number, manf_serial_number: gauge.manf_serial_number,
+    process: "calibration", status: "pending", decision: null, review: null, prefill: { ...EMPTY_ACCEPTANCE_FIELDS }, requires_review: true }
+}
+
+export function demoVisibleGauge(state: DemoState, gauge: Gauge): Gauge {
+  const row = [...state.acceptances].reverse().find(r => r.gauge_id === gauge.id)
+  if (!row) return gauge
+  const previous = state.histories[gauge.id]?.find(h => !h.acceptance_required || h.customer_acceptance)
+  return { ...gauge, pending_acceptance: !row.review, customer_acceptance: row.review ?? previous?.customer_acceptance,
+    ...(!row.review ? { certificate_issue_date: previous?.certificate_issue_date, next_calibration_date: previous?.next_calibration_date } : {}) }
 }
 
 export function loadDemoState(): DemoState {
   try {
     const saved = JSON.parse(sessionStorage.getItem(DEMO_DATA_KEY) ?? "null") as DemoState | null
-    if (saved?.version === 1) return saved
+    if (saved?.version === 1 && saved.acceptances) return saved
   } catch { /* A reset recovers invalid browser demo data. */ }
   const state = createDemoState()
   saveDemoState(state)
@@ -108,7 +147,7 @@ export function loadDemoState(): DemoState {
 export function saveDemoState(state: DemoState) { sessionStorage.setItem(DEMO_DATA_KEY, JSON.stringify(state)) }
 
 export function planningRows(state: DemoState, year: number): CalibrationPlanningDetail[] {
-  return state.gauges.filter(g => !g.archived && g.next_calibration_date?.startsWith(String(year))).map(g => {
+  return state.gauges.map(g => demoVisibleGauge(state, g)).filter(g => !g.archived && g.next_calibration_date?.startsWith(String(year))).map(g => {
     const days = Math.round((new Date(`${g.next_calibration_date}T12:00:00`).getTime() - new Date(`${state.anchor}T12:00:00`).getTime()) / 86400000)
     const completed = g.status === "calibration_completed"
     return { id: snapshot(g).cycle_key, gauge_id: g.id, gauge_name: g.master_gauge_name, identification_number: g.identification_number,

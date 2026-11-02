@@ -1,6 +1,7 @@
 export type RequestStatus = "submitted" | "acknowledged" | "scheduled" | "in_progress" | "completed" | "cancelled";
 
 export interface ReminderSnapshot {
+  pending_acceptance?: boolean;
   gauge_id: string;
   cycle_key: string;
   gauge_name: string;

@@ -22,6 +22,8 @@ export interface Organization {
 
 
 export interface GaugeHistory {
+  acceptance_required?: boolean
+  customer_acceptance?: import("./gaugeAcceptance").CustomerAcceptance | null
   id: string
   gauge_id: string
   action: 'Calibration' | 'Repair' | 'Maintenance' | 'Inspection'
@@ -73,6 +75,8 @@ export interface ApiError {
 }
 
 export interface Gauge {
+  customer_acceptance?: import("./gaugeAcceptance").CustomerAcceptance | null
+  pending_acceptance?: boolean
   archived: boolean
   updated_at: string
   created_at: string

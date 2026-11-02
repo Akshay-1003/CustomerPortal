@@ -5,7 +5,8 @@ import type { Gauge, GaugeHistory } from "@/types/api"
 import type { CalibrationPlanningDetail } from "@/types/calibrationPlanning"
 import type { ReminderType, ReminderPreferences } from "@/types/notifications"
 import type { PlanningRequest, RequestStatus } from "@/types/planningRequests"
-import { CUSTOMER_ID, LABS, demoUser, organization, day, loadDemoState, saveDemoState, snapshot, makeNotification, planningRows, type DemoState } from "./data"
+import { CUSTOMER_ID, LABS, demoUser, organization, day, loadDemoState, saveDemoState, snapshot, makeNotification, planningRows, createAcceptanceSource, demoVisibleGauge, type DemoState } from "./data"
+import { demoAcceptance, replaceDemoCertificate } from "./acceptance"
 
 function requireRecord<T>(value: T | undefined): T {
   if (!value) throw new Error("Demo record not found")
@@ -79,6 +80,8 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
   const method = config.method?.toUpperCase() ?? "GET"
   const body = typeof config.data === "string" ? JSON.parse(config.data) : config.data ?? {}
   const id = path.split("/").at(-1)!
+  if (path.startsWith("/customer/gauge-acceptances")) return demoAcceptance(config, state)
+  if (path === "/demo/replace-acceptance-certificate") return replaceDemoCertificate(state, body.id)
   if (path === "/auth/customer/refresh") return { access_token: token(), token_type: "bearer" }
   if (path === "/auth/customer/me") return demoUser
   if (path === "/auth/customer/logout") return { success: true }
@@ -123,6 +126,7 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
     const record = requireRecord(state.transactions.find(t => t.id === body.id && !t.received_date))
     record.received_date = state.anchor
     for (const gaugeId of record.gauge_ids) completeCalibration(state, gaugeId)
+    for (const gaugeId of record.gauge_ids) state.acceptances.push(createAcceptanceSource(state, record, gaugeId))
     return record
   }
   if (path === "/customer/notification-settings") return state.preferences
@@ -215,7 +219,7 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
     return path.startsWith("/outward/") ? { outward_details: { id: record.id, outward_no: record.number, outward_date: record.received_date, client_org: organization.name, transport_by: "Demo courier", address: organization.address }, outward_gauges: gauges } : gauges
   }
   if (/^\/gauge\/organization\/[^/]+\/gauges$/.test(path)) {
-    let gauges = state.gauges
+    let gauges = state.gauges.map(g => demoVisibleGauge(state, g))
     const search = params.get("search")?.toLowerCase()
     if (search) gauges = gauges.filter(g => `${g.master_gauge_name} ${g.identification_number} ${g.manf_serial_number}`.toLowerCase().includes(search))
     const page = Number(params.get("page") ?? 1), limit = Number(params.get("limit") ?? 10)
@@ -223,7 +227,8 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
   }
   if (/^\/gauge\/[^/]+\/history$/.test(path)) {
     const gauge = requireRecord(state.gauges.find(g => g.id === path.split("/")[2]))
-    return (state.histories[gauge.id] ?? []).map(h => ({ ...h, certificate_url: certificate(gauge, h) }))
+    const history = state.histories[gauge.id] ?? []
+    return history.filter(h => !h.acceptance_required || h.customer_acceptance).map(h => ({ ...h, certificate_url: certificate(gauge, h) }))
   }
   if (path === "/gauge" && method === "POST") {
     const base = state.gauges[0]
@@ -236,7 +241,7 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
     const gauge = requireRecord(state.gauges.find(g => g.id === id))
     if (method === "DELETE") { state.gauges = state.gauges.filter(g => g.id !== id); return {} }
     if (method === "PUT") Object.assign(gauge, body)
-    return gauge
+    return demoVisibleGauge(state, gauge)
   }
   if (path === "/uploads/certificates") {
     const file = (config.data as FormData).get("file")
