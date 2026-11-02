@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from "@/components/ui/table"
@@ -21,7 +22,12 @@ import { ACCEPTANCE_DECISIONS, ACCEPTANCE_FIELDS, EMPTY_ACCEPTANCE_FIELDS, type 
   type AcceptanceDecision, type AcceptanceField, type AcceptanceFields, type ReviewResult, type AcceptanceSource } from "@/types/gaugeAcceptance"
 
 const STATUS_LABELS = { pending: "Pending Acceptance", accepted: "Accepted", rejected: "Rejected" }
-const selectClass = "h-10 rounded-md border bg-background px-3 text-sm"
+const ROW_STATUS_LABELS = { pending: "Pending", accepted: "Accepted", rejected: "Rejected" }
+const STATUS_COLORS = {
+  pending: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200",
+  accepted: "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200",
+  rejected: "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200",
+}
 const HELP: Record<AcceptanceField, string> = {
   maintenance_details: "Record maintenance, repair follow-up, or other customer handling details.",
   history_card_number: "Your internal history-card reference. This is separate from the report format number.",
@@ -61,11 +67,16 @@ export default function GaugeAcceptance() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [results, setResults] = useState<ReviewResult[]>([])
+  const [preview, setPreview] = useState<AcceptanceRow | null>(null)
+  const [frameLoaded, setFrameLoaded] = useState(false)
   const submission = useRef({ hash: "", key: "" })
   useEffect(() => { setSelected(new Set()); setPage(0) }, [status, debouncedSearch, decisionFilter, through.apiGroup, limit])
   const query = useQuery({ queryKey: ["gauge-acceptances", user?.organization_id, status, debouncedSearch, decisionFilter, through.apiGroup, page, limit],
     queryFn: () => acceptanceService.list({ status, search: debouncedSearch, decision: decisionFilter || undefined, through_group: through.apiGroup, page, limit }) })
   const rows = query.data?.data ?? []
+  const previewQuery = useQuery({ queryKey: ["gauge-acceptance-certificate", user?.organization_id, preview?.outward_gauge_id, preview?.certificate_id, preview?.certificate_revision],
+    queryFn: () => acceptanceService.certificate(source(preview!)), enabled: Boolean(preview), staleTime: 0, retry: false })
+  const columnCount = canEdit ? 9 : 8
   const selectedRows = rows.filter(r => selected.has(r.outward_gauge_id))
   const allSelected = rows.length > 0 && rows.every(r => selected.has(r.outward_gauge_id))
   const refresh = () => client.invalidateQueries({ predicate: q => !["customer-reminder-preferences"].includes(String(q.queryKey[0])) })
@@ -106,7 +117,9 @@ export default function GaugeAcceptance() {
     <div><h1 className="text-2xl font-semibold">Gauge Verification &amp; Acceptance</h1><p className="mt-1 text-sm text-muted-foreground">Review gauges returned by your calibration laboratory. Every submitted decision releases that calibration version to your portal.</p></div>
     <div className="flex flex-wrap gap-2">{(Object.entries(STATUS_LABELS) as [AcceptanceStatus, string][]).map(([key, label]) => <Button key={key} variant={status === key ? "default" : "outline"} onClick={() => setStatus(key)}>{label} · {query.data?.counts[key] ?? 0}</Button>)}</div>
     <div className="flex flex-wrap gap-2"><Input className="min-w-56 flex-1" aria-label="Search returned gauges" placeholder="Search gauge, identification, serial, remark…" value={search} onChange={e => setSearch(e.target.value)} />
-      <select aria-label="Filter review decision" className={selectClass} value={decisionFilter} onChange={e => setDecisionFilter(e.target.value)}><option value="">All decisions</option>{Object.entries(ACCEPTANCE_DECISIONS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
+      <Select value={decisionFilter || "all"} onValueChange={value => setDecisionFilter(value === "all" ? "" : value)}><SelectTrigger aria-label="Filter review decision" className="h-10 w-full sm:w-56"><SelectValue placeholder="All decisions" /></SelectTrigger>
+        <SelectContent><SelectItem value="all">All decisions</SelectItem>{Object.entries(ACCEPTANCE_DECISIONS).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent>
+      </Select>
       {through.enabled && <ThroughGroupFilter value={through.group} onChange={through.setGroup} />}<Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Refresh</Button>
     </div>
     {canEdit && <div className="flex flex-wrap items-center gap-2 text-sm"><span>{selected.size} selected</span>
@@ -117,16 +130,16 @@ export default function GaugeAcceptance() {
     {query.isError && <p role="alert">Unable to load returned gauges. Try Refresh.</p>}
     <div className="overflow-x-auto rounded-md border"><Table><TableHeader><TableRow>
       {canEdit && <TableHead><Checkbox aria-label="Select current page" checked={allSelected ? true : selectedRows.length ? "indeterminate" : false} onCheckedChange={checked => setSelected(checked ? new Set(rows.map(r => r.outward_gauge_id)) : new Set())} /></TableHead>}
-      {["Sr No", "Inward / Outward", "Laboratory / Lab ID", "Gauge", "Identification", "Serial", "Process", "Status / Decision", "Action"].map(label => <TableHead key={label}>{label}</TableHead>)}
-    </TableRow></TableHeader><TableBody>{query.isLoading ? <TableRow><TableCell colSpan={10}>Loading returned gauges…</TableCell></TableRow> : rows.map((r, i) => <TableRow key={r.outward_gauge_id}>
+      {["Sr No", "Lab ID", "Gauge", "Identification", "Serial", "Process", "Status", "Action"].map(label => <TableHead key={label} className={label === "Sr No" || label === "Lab ID" || label === "Status" ? "w-px whitespace-nowrap" : undefined}>{label}</TableHead>)}
+    </TableRow></TableHeader><TableBody>{query.isLoading ? <TableRow><TableCell colSpan={columnCount}>Loading returned gauges…</TableCell></TableRow> : rows.map((r, i) => <TableRow key={r.outward_gauge_id}>
       {canEdit && <TableCell><Checkbox aria-label={`Select ${r.identification_number}`} checked={selected.has(r.outward_gauge_id)} onCheckedChange={checked => setSelected(previous => { const next = new Set(previous); if (checked) next.add(r.outward_gauge_id); else next.delete(r.outward_gauge_id); return next })} /></TableCell>}
-      <TableCell>{page * limit + i + 1}</TableCell><TableCell className="whitespace-nowrap">{r.inward_no} / {r.outward_no}</TableCell><TableCell>{r.laboratory_name}<div className="text-xs text-muted-foreground">{r.inward_gauge_lab_id || "—"}</div></TableCell>
+      <TableCell className="whitespace-nowrap">{page * limit + i + 1}</TableCell><TableCell className="whitespace-nowrap">{r.inward_gauge_lab_id ? <Button type="button" variant="ghost" size="sm" className="h-auto rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900" aria-label={`Preview certificate for Lab ID ${r.inward_gauge_lab_id}`} onClick={() => { setFrameLoaded(false); setPreview(r) }}>{r.inward_gauge_lab_id}</Button> : "—"}</TableCell>
       <TableCell>{r.gauge_name}</TableCell><TableCell>{r.identification_number || "—"}</TableCell><TableCell>{r.manf_serial_number || "—"}</TableCell><TableCell>{r.process}</TableCell>
-      <TableCell><Badge variant="outline">{STATUS_LABELS[r.status]}</Badge>{r.decision && <div className="mt-1 text-xs">{ACCEPTANCE_DECISIONS[r.decision]}</div>}</TableCell>
+      <TableCell><Badge variant="outline" className={`whitespace-nowrap rounded-full ${STATUS_COLORS[r.status]}`}>{ROW_STATUS_LABELS[r.status]}</Badge></TableCell>
       <TableCell><Button size="sm" variant="outline" disabled={busy || (!canEdit && !r.version)} onClick={() => void open([r], false)}>{r.version ? "View" : "Review"}</Button></TableCell>
-    </TableRow>)}{!query.isLoading && !rows.length && <TableRow><TableCell colSpan={10}>No matching returned gauges.</TableCell></TableRow>}</TableBody></Table></div>
+    </TableRow>)}{!query.isLoading && !rows.length && <TableRow><TableCell colSpan={columnCount}>No matching returned gauges.</TableCell></TableRow>}</TableBody></Table></div>
     <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{query.data?.total ?? 0} records · Page {page + 1}</span><div className="flex gap-2">
-      <select aria-label="Rows per page" className={selectClass} value={limit} onChange={e => setLimit(Number(e.target.value))}>{[10, 25, 50, 100].map(n => <option key={n}>{n}</option>)}</select>
+      <Select value={String(limit)} onValueChange={value => setLimit(Number(value))}><SelectTrigger aria-label="Rows per page" className="h-10 w-20"><SelectValue /></SelectTrigger><SelectContent>{[10, 25, 50, 100].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent></Select>
       <Button variant="outline" disabled={!page} onClick={() => { setPage(page - 1); setSelected(new Set()) }}>Previous</Button><Button variant="outline" disabled={(page + 1) * limit >= (query.data?.total ?? 0)} onClick={() => { setPage(page + 1); setSelected(new Set()) }}>Next</Button>
     </div></div>
     {results.length > 0 && <section aria-label="Review results" className="rounded-md border p-4 text-sm"><h2 className="font-semibold">Review results</h2><ul className="mt-2 space-y-1">{results.map(r => <li key={r.outward_gauge_id}>{r.gauge_label || r.outward_gauge_id} · {r.outcome}{r.reason ? ` · ${r.reason}` : ""}</li>)}</ul></section>}
@@ -138,7 +151,7 @@ export default function GaugeAcceptance() {
       {modal?.bulk && <p className="text-sm">{modal.rows.filter(r => !r.version).length} pending · {modal.rows.filter(r => r.version).length} corrections. Optional fields change only when enabled below.</p>}
       {modal?.bulk && <p className="text-sm text-muted-foreground">Enabled fields with a blank value clear that field on every selected gauge.</p>}
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); void save() }}>
-        <label className="block space-y-1 text-sm"><span>Decision <Help text="Choose the customer's verification outcome. A rejection does not alter the laboratory's calibration result." /></span><select aria-label="Review decision" className={`${selectClass} w-full`} disabled={!editing || busy} value={decision} onChange={e => setDecision(e.target.value as AcceptanceDecision)}>{allowed.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+        <div className="space-y-1 text-sm"><span>Decision <Help text="Choose the customer's verification outcome. A rejection does not alter the laboratory's calibration result." /></span><Select disabled={!editing || busy} value={decision} onValueChange={value => setDecision(value as AcceptanceDecision)}><SelectTrigger aria-label="Review decision" className="h-10"><SelectValue /></SelectTrigger><SelectContent>{allowed.map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent></Select></div>
         <label className="block space-y-1 text-sm"><span>Remark note {decision !== "accept" && "*"}<Help text="Explain conditions, discrepancies or rejection. Required for every decision except Accept." /></span><textarea maxLength={4000} className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 disabled:opacity-50" aria-label="Remark note" disabled={!editing || busy} required={decision !== "accept"} value={remark} onChange={e => setRemark(e.target.value)} /></label>
         <div className="grid gap-4 sm:grid-cols-2">{(Object.entries(ACCEPTANCE_FIELDS) as [AcceptanceField, string][]).map(([key, label]) => <div key={key} className="space-y-1 text-sm">
           <label htmlFor={`acceptance-${key}`}>{label}<Help text={HELP[key]} /></label>
@@ -153,6 +166,16 @@ export default function GaugeAcceptance() {
           {editing && <Button type="submit" disabled={busy}>{busy ? "Saving…" : modal?.bulk ? "Confirm bulk review" : "Save review"}</Button>}
         </div>
       </form>
+    </DialogContent></Dialog>
+    <Dialog open={Boolean(preview)} onOpenChange={open => { if (!open) setPreview(null) }}><DialogContent className="max-w-5xl"><DialogHeader>
+      <DialogTitle>Certificate · Lab ID {preview?.inward_gauge_lab_id}</DialogTitle>
+      <DialogDescription>Inspect this returned gauge's certificate. Previewing does not submit or change its review.</DialogDescription>
+    </DialogHeader>
+      {previewQuery.isError ? <div role="alert" className="space-y-3 text-sm"><p>{message(previewQuery.error)}</p><Button variant="outline" onClick={() => { setPreview(null); void query.refetch() }}>Refresh table</Button></div> : <div className="relative h-[70vh] rounded-md border bg-muted">
+        {(previewQuery.isPending || !frameLoaded) && <p role="status" className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-background text-sm text-muted-foreground">Loading certificate…</p>}
+        {previewQuery.data && <iframe key={`${preview?.certificate_id}:${preview?.certificate_revision}`} title={`Certificate preview for Lab ID ${preview?.inward_gauge_lab_id}`} src={previewQuery.data.certificate_url} className="relative h-full w-full rounded-md border-0 bg-white" onLoad={() => setFrameLoaded(true)} sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-downloads" />}
+      </div>}
+      {previewQuery.data && !previewQuery.isError && <Button asChild variant="outline"><a href={previewQuery.data.certificate_url} target="_blank" rel="noopener noreferrer">Open certificate in new tab</a></Button>}
     </DialogContent></Dialog>
   </div></TooltipProvider>
 }

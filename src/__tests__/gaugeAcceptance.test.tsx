@@ -14,6 +14,7 @@ const auth = vi.hoisted(() => ({ viewer: false }))
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { organization_id: "demo-customer", roles: [auth.viewer ? "org_viewer" : "org_admin"], user: { ...demoUser, role: auth.viewer ? "org_viewer" : "org_admin" } } }) }))
 const clients: QueryClient[] = []
 beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, writable: true, value: vi.fn() })
   auth.viewer = false
   sessionStorage.clear(); sessionStorage.setItem("customerportal.demo-session", "active")
   saveDemoState(createDemoState(new Date(2026, 10, 2, 12)))
@@ -28,6 +29,10 @@ function values(changes: Partial<ReviewValues> = {}): ReviewValues {
   return { decision: "accept", remark_note: "", fields: {}, correction_reason: "", idempotency_key: "acceptance-test-key", ...changes }
 }
 const pending = () => loadDemoState().acceptances.filter(r => r.status === "pending")
+async function choose(label: string, option: string) {
+  fireEvent.keyDown(screen.getByRole("combobox", { name: label }), { key: "ArrowDown" })
+  fireEvent.click(await screen.findByRole("option", { name: option }))
+}
 
 describe("customer gauge verification", () => {
   it("saves an individual review, releases only its latest history, and corrects it without losing fields", async () => {
@@ -97,7 +102,7 @@ describe("customer gauge verification", () => {
     await screen.findByRole("button", { name: "Pending Acceptance · 5" })
     fireEvent.click(screen.getAllByRole("button", { name: "Review" })[0])
     const dialog = await screen.findByRole("dialog")
-    fireEvent.change(within(dialog).getByLabelText("Review decision"), { target: { value: "not_ok" } })
+    await choose("Review decision", "Not Ok")
     fireEvent.submit(within(dialog).getByRole("button", { name: "Save review" }).closest("form")!)
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Enter a remark")
     fireEvent.change(within(dialog).getByLabelText("Remark note"), { target: { value: "Damage found" } })
@@ -130,7 +135,7 @@ describe("customer gauge verification", () => {
     fireEvent.click(screen.getByRole("button", { name: "Accepted · 9" }))
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select current page" })).toBeEnabled())
     fireEvent.click(screen.getByRole("checkbox", { name: "Select current page" }))
-    fireEvent.change(screen.getByLabelText("Filter review decision"), { target: { value: "conditional_accept" } })
+    await choose("Filter review decision", "Conditional Accept")
     await waitFor(() => expect(screen.getByText("0 selected")).toBeInTheDocument())
   })
 
@@ -159,6 +164,39 @@ describe("customer gauge verification", () => {
     await screen.findByRole("dialog")
     expect(screen.queryByRole("button", { name: "Edit review" })).not.toBeInTheDocument()
     expect(XMLHttpRequest.prototype.open).not.toHaveBeenCalled()
+  })
+
+  it("shows compact Lab ID chips and opens the current certificate without accepting the gauge", async () => {
+    const row = pending()[0]
+    const previous = await gaugeService.getGaugeHistory(row.gauge_id)
+    renderPage()
+    const chip = await screen.findByRole("button", { name: `Preview certificate for Lab ID ${row.inward_gauge_lab_id}` })
+    expect(screen.getByRole("columnheader", { name: "Lab ID" })).toBeInTheDocument()
+    expect(screen.queryByRole("columnheader", { name: "Inward / Outward" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("columnheader", { name: "Status / Decision" })).not.toBeInTheDocument()
+    const table = screen.getByRole("table")
+    expect(within(table).queryByText(row.laboratory_name)).not.toBeInTheDocument()
+    expect(within(table).getAllByText("Pending", { exact: true })[0]).toHaveClass("bg-amber-50")
+    expect(screen.getByRole("combobox", { name: "Filter review decision" }).tagName).toBe("BUTTON")
+    expect(table.querySelectorAll("select")).toHaveLength(0)
+    fireEvent.click(chip)
+    await screen.findByRole("dialog")
+    const frame = await screen.findByTitle(`Certificate preview for Lab ID ${row.inward_gauge_lab_id}`)
+    expect(frame.getAttribute("src")).toMatch(/^data:application\/pdf/)
+    fireEvent.load(frame)
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument())
+    expect((await acceptanceService.detail(row.outward_gauge_id)).version).toBe(0)
+    expect(await gaugeService.getGaugeHistory(row.gauge_id)).toHaveLength(previous.length)
+  })
+
+  it("shows a recoverable error when the selected certificate is unavailable", async () => {
+    vi.spyOn(acceptanceService, "certificate").mockRejectedValueOnce({ response: { data: { detail: "Certificate preview is not available" } } })
+    renderPage()
+    fireEvent.click((await screen.findAllByRole("button", { name: /Preview certificate for Lab ID/ }))[0])
+    expect(await screen.findByRole("alert")).toHaveTextContent("Certificate preview is not available")
+    expect(screen.queryByTitle(/Certificate preview for Lab ID/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Refresh table" }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
   })
 
   it("prints each cycle's own review metadata and paginates long remarks without losing text", () => {

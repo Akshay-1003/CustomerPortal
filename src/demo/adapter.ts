@@ -80,6 +80,14 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
   const method = config.method?.toUpperCase() ?? "GET"
   const body = typeof config.data === "string" ? JSON.parse(config.data) : config.data ?? {}
   const id = path.split("/").at(-1)!
+  if (path.startsWith("/customer/gauge-acceptances/") && path.endsWith("/certificate")) {
+    const row = requireRecord(state.acceptances.find(r => r.outward_gauge_id === path.split("/")[3]))
+    if (params.get("certificate_id") !== row.certificate_id || Number(params.get("certificate_revision")) !== row.certificate_revision) throw new Error("The certificate changed. Refresh the table and open the current version.")
+    const gauge = requireRecord(state.gauges.find(g => g.id === row.gauge_id))
+    const history = requireRecord(state.histories[row.gauge_id]?.[0])
+    return { certificate_id: row.certificate_id, certificate_revision: row.certificate_revision,
+      inward_gauge_lab_id: row.inward_gauge_lab_id, certificate_url: certificate(gauge, history) }
+  }
   if (path.startsWith("/customer/gauge-acceptances")) return demoAcceptance(config, state)
   if (path === "/demo/replace-acceptance-certificate") return replaceDemoCertificate(state, body.id)
   if (path === "/auth/customer/refresh") return { access_token: token(), token_type: "bearer" }
