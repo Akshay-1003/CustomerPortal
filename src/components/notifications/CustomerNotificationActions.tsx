@@ -42,7 +42,7 @@ export function CustomerNotificationActions({
     <div className="flex flex-wrap gap-2">
       <Button asChild variant="outline" size="sm">
         <Link to={actionUrl} onClick={onActionComplete}>
-            {notification.planning_request_id ? "Track request" : "View Due Gauges"}
+            {notification.planning_request_id ? "Track request" : notification.event_type && notification.event_type !== "calibration.reminder" ? "View details" : "View Due Gauges"}
         </Link>
       </Button>
       {canRespond ? (

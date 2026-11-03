@@ -1,3 +1,4 @@
+import { useNotificationRealtime } from "@/hooks/useNotificationRealtime";
 import { Link } from "react-router-dom";
 import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { canEditCustomerModule } from "@/lib/permissions";
 import type { NotificationEvent } from "@/types/notifications";
 
 export function CustomerNotificationBell() {
+  useNotificationRealtime();
   const { user } = useAuth();
   const notificationsQuery = useCustomerNotifications({ limit: 25 });
   const markRead = useMarkCustomerNotificationRead();

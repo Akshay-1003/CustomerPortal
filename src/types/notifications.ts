@@ -1,3 +1,4 @@
+export const lifecycleEventOptions = [["calibration.reminder", "Calibration due / overdue"], ["inward.confirmed", "Laboratory inward recorded"], ["calibration.completed", "Calibration completed"], ["certificate.published", "Certificates published"], ["certificate.revised", "Certificates revised"], ["outward.acceptance_ready", "Ready for acceptance"], ["acceptance.submitted", "Customer acceptance submitted"], ["planning.submitted", "Planning request submitted"], ["planning.acknowledged", "Planning request acknowledged"], ["planning.scheduled", "Planning request scheduled"], ["planning.in_progress", "Planning request started"], ["planning.cancelled", "Planning request cancelled"], ["planning.completed", "Planning request completed"]] as const;
 export type NotificationChannel = "Portal" | "Email" | "WhatsApp";
 export type ReminderType = "30_days" | "15_days" | "7_days" | "due_date" | "overdue";
 export type DeliveryStatus = "upcoming" | "sent" | "failed" | "responded";
@@ -8,6 +9,9 @@ export type CustomerResponseStatus =
   | "none";
 
 export interface NotificationEvent {
+  event_type?: string | null;
+  gauge_ids?: string[];
+  gauge_inward_ids?: string[];
   laboratory_id?: string;
   planning_request_id?: string | null;
   snapshots?: import("./planningRequests").ReminderSnapshot[];
@@ -50,6 +54,8 @@ export interface NotificationListResponse {
 export type CustomerNotificationResponse = "yes_plan_calibration" | "not_now";
 
 export interface ReminderPreferences {
+  event_channels?: Record<string, NotificationChannel[]>;
+  customer_event_opt_outs?: Record<string, NotificationChannel[]>;
   laboratory_name?: string | null;
   organization_id: string;
   laboratory_id: string;

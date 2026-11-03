@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notification.service";
-import type { ReminderPreferences as Preferences } from "@/types/notifications";
+import { lifecycleEventOptions, type ReminderPreferences as Preferences } from "@/types/notifications";
 import { useAuth } from "@/hooks/useAuth";
 import { canEditCustomerModule } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,12 @@ export function ReminderPreferences() {
         <p className="text-xs text-muted-foreground">Opt-outs apply across all portals. WhatsApp requires consent for each number.</p>
         <div className="grid gap-3 md:grid-cols-2">{Object.entries(p.reminder_timing).map(([milestone, enabled]) => <label key={milestone} className="flex items-center justify-between gap-3 text-sm">
           {milestone.replaceAll("_", " ")}<Switch checked={enabled} onCheckedChange={value => update(p.laboratory_id, { reminder_timing: { ...p.reminder_timing, [milestone]: value } })} />
+        </label>)}</div>
+        <h4 className="text-sm font-semibold">Portal lifecycle notifications</h4>
+        <div className="grid gap-3 md:grid-cols-2">{lifecycleEventOptions.map(([event, label]) => <label key={event} className="flex items-center justify-between gap-3 text-sm">
+          {label}<Switch checked={!(p.customer_event_opt_outs?.[event] ?? []).includes("Portal")} onCheckedChange={enabled => update(p.laboratory_id, {
+            customer_event_opt_outs: { ...p.customer_event_opt_outs, [event]: enabled ? (p.customer_event_opt_outs?.[event] ?? []).filter(channel => channel !== "Portal") : [...new Set([...(p.customer_event_opt_outs?.[event] ?? []), "Portal" as const])] },
+          })} />
         </label>)}</div>
         <Button type="submit" disabled={mutation.isPending}>Save preferences</Button>
       </form></CardContent>
