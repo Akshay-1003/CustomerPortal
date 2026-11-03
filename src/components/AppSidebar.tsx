@@ -209,7 +209,7 @@ export function AppSidebar() {
                       </CollapsibleTrigger>
 
                       <CollapsibleContent>
-                        <SidebarMenuSub className="mt-1 ml-4 space-y-1 border-l border-primary/30 pl-3">
+                        <SidebarMenuSub className="mt-1 ml-4 space-y-1 border-l border-primary/30">
                           {item.items.map((subItem) => {
                             const isSubActive = matchesPath(subItem.href, subItem.matchPattern)
 
@@ -219,7 +219,7 @@ export function AppSidebar() {
                                   asChild
                                   isActive={isSubActive}
                                   className={cn(
-                                    "rounded-lg px-3 py-2 transition-all duration-300 hover:bg-primary/10 hover:text-primary",
+                                    "rounded-lg px-2 py-1 transition-all duration-300 hover:bg-primary/10 hover:text-primary",
                                     subItem.disabled && "opacity-50 pointer-events-none hover:bg-transparent hover:text-muted-foreground",
                                     isSubActive &&
                                     "bg-primary/10 text-primary border border-primary/30 shadow-sm font-medium"

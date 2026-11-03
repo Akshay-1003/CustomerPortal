@@ -25,6 +25,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
   const apiBaseUrl = env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
   const { origin: apiOrigin, pathname: apiPathname } = resolveApiTarget(apiBaseUrl)
+  // Workbox serializes match callbacks without their enclosing scope. A RegExp
+  // embeds the configured target in the generated worker without free variables.
+  const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const apiPattern = new RegExp(`^(?:${apiOrigin ? `${escapePattern(apiOrigin + apiPathname)}|` : ""}https?://[^/]+/api/)`)
 
   return {
     plugins: [
@@ -84,13 +88,7 @@ export default defineConfig(({ mode }) => {
           ],
           runtimeCaching: [
             {
-              urlPattern: ({ url }) => {
-                if (apiOrigin && url.origin === apiOrigin && url.pathname.startsWith(apiPathname)) {
-                  return true
-                }
-
-                return url.pathname.startsWith("/api/")
-              },
+              urlPattern: apiPattern,
               handler: "NetworkOnly",
               method: "GET",
             },
