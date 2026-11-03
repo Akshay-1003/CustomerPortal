@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import type { Inward, InwardGauge } from "@/types/api"
+import type { InwardGauge } from "@/types/api"
+import type { SentChallanDetails } from "@/types/customerTransactions"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 import "./OutwardChallanPrintPreview.css"
 import { toast } from "sonner"
@@ -12,7 +13,7 @@ type OutwardChallanPrintPreviewProps = {
   onOpenChange: (open: boolean) => void
   companyName: string
   companyAddress?: string
-  inward: Inward
+  inward: SentChallanDetails
   gauges: InwardGauge[]
 }
 
@@ -53,7 +54,7 @@ function formatDate(value?: string): string {
 function buildPrintHtml(
   companyName: string,
   companyAddress: string,
-  inward: Inward,
+  inward: SentChallanDetails,
   gauges: InwardGauge[]
 ) {
   const gaugeRows = gauges

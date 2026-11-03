@@ -17,7 +17,8 @@ export const demoUser: User = { id: "demo-user", username: "demo.customer", emai
   first_name: "Demo", last_name: "Customer", organization_id: CUSTOMER_ID, lab_id: LABS[0], role: "org_admin",
   password: "", phone: "", department: "Quality Assurance" }
 
-export type DemoTransaction = { id: string; gauge_ids: string[]; date: string; received_date?: string; number: number }
+export type DemoTransaction = { id: string; gauge_ids: string[]; date: string; received_date?: string; number: number;
+  gauge_snapshots?: Record<string, Gauge>; calibration_statuses?: Record<string, string> }
 export type DemoDelivery = { id: string; notification_id: string; laboratory_id: string; status: "sent" | "delivered" | "read" | "failed" | "suppressed"; reason?: string }
 export type DemoState = { version: 1; anchor: string; gauges: Gauge[]; histories: Record<string, GaugeHistory[]>;
   notifications: NotificationEvent[]; requests: PlanningRequest[]; preferences: ReminderPreferences[];
@@ -91,6 +92,10 @@ export function createDemoState(now = new Date()): DemoState {
   })
   for (const transaction of transactions.filter(t => !t.received_date)) {
     for (const id of transaction.gauge_ids) gauges.find(g => g.id === id)!.status = "inward_pending"
+  }
+  for (const [i, transaction] of transactions.entries()) {
+    transaction.gauge_snapshots = Object.fromEntries(transaction.gauge_ids.map(id => [id, structuredClone(gauges.find(g => g.id === id)!)]))
+    transaction.calibration_statuses = Object.fromEntries(transaction.gauge_ids.map(id => [id, transaction.received_date ? "calibration_completed" : i % 3 ? "inward_received" : "calibration_in_progress"]))
   }
   const deliveries: DemoDelivery[] = notifications.map((n, i) => ({ id: `demo-delivery-${i}`, notification_id: n.id,
     laboratory_id: n.laboratory_id!, status: (["sent", "delivered", "read", "failed", "suppressed"] as const)[i],

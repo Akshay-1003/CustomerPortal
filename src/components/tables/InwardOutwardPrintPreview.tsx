@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import type { OutwardGauge, Outward } from "@/types/api"
+import type { OutwardGauge } from "@/types/api"
+import type { ReceivedChallanDetails } from "@/types/customerTransactions"
 import { formatSpecificationForPrint } from "@/components/reports/helpers/specificationFormatter"
 import { toast } from "sonner"
 import { PrintPreviewActions } from "@/components/export/PrintPreviewActions"
@@ -13,7 +14,7 @@ type InwardOutwardPrintPreviewProps = {
   companyName: string
   companyAddress?: string
   gauges: OutwardGauge[]
-  selectedOutward: Outward
+  selectedOutward: ReceivedChallanDetails
 }
 
 const INWARD_EXPORT_COLUMNS: ExportColumn<OutwardGauge>[] = [

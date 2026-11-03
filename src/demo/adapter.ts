@@ -7,6 +7,7 @@ import type { ReminderType, ReminderPreferences } from "@/types/notifications"
 import type { PlanningRequest, RequestStatus } from "@/types/planningRequests"
 import { CUSTOMER_ID, LABS, demoUser, organization, day, loadDemoState, saveDemoState, snapshot, makeNotification, planningRows, createAcceptanceSource, demoVisibleGauge, type DemoState } from "./data"
 import { demoAcceptance, replaceDemoCertificate } from "./acceptance"
+import { demoTransactions } from "./transactions"
 
 function requireRecord<T>(value: T | undefined): T {
   if (!value) throw new Error("Demo record not found")
@@ -80,6 +81,7 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
   const method = config.method?.toUpperCase() ?? "GET"
   const body = typeof config.data === "string" ? JSON.parse(config.data) : config.data ?? {}
   const id = path.split("/").at(-1)!
+  if (path.startsWith("/customer/transactions/")) return demoTransactions(config, state)
   if (path.startsWith("/customer/gauge-acceptances/") && path.endsWith("/certificate")) {
     const row = requireRecord(state.acceptances.find(r => r.outward_gauge_id === path.split("/")[3]))
     if (params.get("certificate_id") !== row.certificate_id || Number(params.get("certificate_revision")) !== row.certificate_revision) throw new Error("The certificate changed. Refresh the table and open the current version.")
@@ -125,7 +127,8 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
   if (path === "/demo/dispatch") {
     const gauge = requireRecord(state.gauges.find(g => g.id === body.gauge_id && !g.archived && g.gauge_condition !== "Damaged"))
     if (state.transactions.some(t => !t.received_date && t.gauge_ids.includes(gauge.id))) throw new Error("Gauge already sent for calibration")
-    const record = { id: crypto.randomUUID(), gauge_ids: [gauge.id], date: state.anchor, number: 1001 + state.transactions.length }
+    const record = { id: crypto.randomUUID(), gauge_ids: [gauge.id], date: state.anchor, number: 1001 + state.transactions.length,
+      gauge_snapshots: { [gauge.id]: structuredClone(gauge) }, calibration_statuses: { [gauge.id]: "inward_received" } }
     state.transactions.unshift(record)
     gauge.status = "inward_pending"
     return record
@@ -133,6 +136,7 @@ function dispatch(config: InternalAxiosRequestConfig, state: DemoState): unknown
   if (path === "/demo/receive") {
     const record = requireRecord(state.transactions.find(t => t.id === body.id && !t.received_date))
     record.received_date = state.anchor
+    record.calibration_statuses = Object.fromEntries(record.gauge_ids.map(id => [id, "calibration_completed"]))
     for (const gaugeId of record.gauge_ids) completeCalibration(state, gaugeId)
     for (const gaugeId of record.gauge_ids) state.acceptances.push(createAcceptanceSource(state, record, gaugeId))
     return record
