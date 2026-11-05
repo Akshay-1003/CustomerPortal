@@ -24,6 +24,7 @@ export interface PlanningRequest {
   organization_name: string;
   laboratory_id: string;
   status: RequestStatus;
+  workflow_status?: string;
   version: number;
   planned_date?: string | null;
   note?: string | null;

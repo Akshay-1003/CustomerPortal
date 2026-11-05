@@ -42,6 +42,7 @@ export function ReminderPreferences() {
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">Timezone<Input value={p.timezone} onChange={e => update(p.laboratory_id, { timezone: e.target.value })} required /></label>
           <label className="text-sm">Delivery time<Input type="time" value={p.delivery_time} onChange={e => update(p.laboratory_id, { delivery_time: e.target.value })} required /></label>
+          <label className="text-sm">Sending ends (optional)<Input type="time" value={p.delivery_end_time ?? ""} onChange={e => update(p.laboratory_id, { delivery_end_time: e.target.value || null })} /></label>
           <label className="text-sm">Recipient emails (comma separated)<Input value={p.recipient_emails.join(", ")} onChange={e => update(p.laboratory_id, { recipient_emails: e.target.value.split(",").map(s => s.trim()) })} /></label>
           <label className="text-sm">WhatsApp numbers (international format, comma separated)<Input value={p.whatsapp_numbers.join(", ")} onChange={e => update(p.laboratory_id, { whatsapp_numbers: e.target.value.split(",").map(s => s.trim()) })} /></label>
         </div>

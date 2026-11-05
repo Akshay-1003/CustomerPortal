@@ -69,5 +69,6 @@ export interface ReminderPreferences {
   customer_opt_outs: string[];
   timezone: string;
   delivery_time: string;
+  delivery_end_time?: string | null;
 }
 

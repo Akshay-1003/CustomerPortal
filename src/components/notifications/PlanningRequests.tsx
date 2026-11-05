@@ -35,7 +35,7 @@ export function PlanningRequests() {
     {query.data?.requests.length === 0 && <p className="text-muted-foreground">No calibration requests yet.</p>}
     {records.map(request => <Card key={request.id} id={request.id}>
       <CardHeader><CardTitle className="flex items-center justify-between text-base">
-        {request.items.length} gauges <Badge variant="outline">{request.status.replaceAll("_", " ")}</Badge>
+        {request.items.length} gauges <Badge variant="outline">{request.workflow_status ? request.workflow_status.replaceAll("_", " ") : request.status === "submitted" ? "Pending laboratory confirmation" : request.status.replaceAll("_", " ")}</Badge>
       </CardTitle></CardHeader>
       <CardContent className="space-y-3 text-sm">
         {request.planned_date && <p>Planned date: {request.planned_date}</p>}
